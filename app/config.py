@@ -22,6 +22,9 @@ class Settings:
     db_path: str = field(default_factory=lambda: _env("CHECKCA_DB", "checkca.sqlite3"))
     rate_limit_per_hour: int = field(default_factory=lambda: int(_env("RATE_LIMIT_PER_HOUR", "20") or 20))
     max_analyses_per_day: int = field(default_factory=lambda: int(_env("MAX_ANALYSES_PER_DAY", "200") or 200))
+    cors_origins: list[str] = field(default_factory=lambda: [
+        o.strip() for o in _env("CORS_ORIGINS", "https://nprllc.github.io").split(",") if o.strip()
+    ])
 
 
 settings = Settings()

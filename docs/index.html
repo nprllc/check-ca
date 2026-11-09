@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Check ça. — Avant de partager, vérifie.</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27%3E%3Crect width=%27100%27 height=%27100%27 fill=%27black%27/%3E%3Ctext x=%2750%27 y=%2772%27 font-size=%2760%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27sans-serif%27 font-weight=%27bold%27%3E%C3%87%3C/text%3E%3Ccircle cx=%2788%27 cy=%2782%27 r=%279%27 fill=%27%23FAC51D%27/%3E%3C/svg%3E">
+<meta name="description" content="Colle le lien d'une publication, d'un article ou d'une vidéo. On enquête sur l'information et on te donne les éléments pour te faire ton avis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ===== Charte Check ça : noir, blanc, jaune Ulyces #FAC51D — Lexend ===== */
+  :root {
+    --noir: #000000; --blanc: #FFFFFF; --jaune: #FAC51D;
+    --gris: #b9b9b9; --ligne: #ffffff26; --jaune-16: #fac51d29;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--noir); }
+  body { margin: 0; background: var(--noir); color: var(--blanc);
+         font-family: "Lexend", system-ui, sans-serif; line-height: 1.5; }
+  b, strong, h1, h2, h3, .verdict, button, .etape-num { font-weight: 700; }
+
+  header { padding: 40px 20px 8px; text-align: center; }
+  .wordmark { font-size: 1.3rem; letter-spacing: .06em; }
+  .wordmark .point { color: var(--jaune); }
+  .signature { color: var(--gris); font-size: .8rem; letter-spacing: .12em;
+               text-transform: uppercase; margin: 6px 0 0; }
+  .accroche { font-size: clamp(2rem, 7vw, 4.2rem); line-height: 1.02; margin: 44px 0 0;
+              text-transform: uppercase; letter-spacing: .01em; }
+  .accroche .point { color: var(--jaune); }
+  .sous-titre { font-size: clamp(1.05rem, 3vw, 1.35rem); font-weight: 600; margin: 14px 0 0; }
+  .explication { color: var(--gris); max-width: 620px; margin: 18px auto 0; font-size: .98rem; }
+
+  main { max-width: 780px; margin: 0 auto; padding: 20px 20px 70px; }
+
+  .box { background: var(--noir); border: 2px solid var(--ligne); border-radius: 16px;
+         padding: 22px; margin-top: 18px; }
+  form { display: flex; gap: 10px; flex-wrap: wrap; }
+  input[type=url] { flex: 1 1 300px; padding: 15px 16px; border-radius: 12px;
+                    border: 2px solid var(--ligne); background: var(--noir); color: var(--blanc);
+                    font-family: inherit; font-size: 1rem; }
+  input[type=url]:focus { outline: none; border-color: var(--jaune); }
+  input[type=url]::placeholder { color: #8a8a8a; }
+  button { padding: 15px 24px; border: 0; border-radius: 12px; background: var(--jaune);
+           color: var(--noir); font-family: inherit; font-size: .95rem; text-transform: uppercase;
+           letter-spacing: .05em; cursor: pointer; }
+  button:hover { filter: brightness(1.06); }
+  button:disabled { opacity: .6; cursor: wait; }
+  .hint { color: var(--gris); font-size: .82rem; margin: 10px 0 0; }
+  .error { color: var(--blanc); background: var(--jaune-16); border-left: 4px solid var(--jaune);
+           padding: 10px 12px; margin-top: 12px; font-size: .9rem; }
+  .statut { margin-top: 12px; font-size: .9rem; color: var(--gris); }
+  .statut[hidden] { display: none; }
+
+  /* Parcours pédagogique */
+  .parcours { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+              margin-top: 26px; padding: 0; list-style: none; }
+  .parcours li { display: flex; align-items: center; gap: 10px; font-size: .85rem;
+                 border: 1px solid var(--ligne); border-radius: 999px; padding: 8px 16px; }
+  .etape-num { color: var(--jaune); }
+
+  /* ===== Bloc 1 : verdict ===== */
+  .cartouche { display: inline-block; background: var(--noir); border: 2px solid var(--jaune);
+               border-radius: 14px; padding: 14px 22px; }
+  .cartouche .libelle { font-size: clamp(1.2rem, 4vw, 1.9rem); text-transform: uppercase;
+                        letter-spacing: .03em; }
+  .cartouche .libelle .point { color: var(--jaune); }
+  .cartouche .micro { color: var(--gris); font-size: .85rem; font-weight: 400; margin: 6px 0 0; }
+  .meta-analyse { color: var(--gris); font-size: .82rem; margin: 10px 0 0; }
+  .gauges { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+  .gauge { flex: 1 1 190px; border: 1px solid var(--ligne); border-radius: 12px;
+           padding: 14px; text-align: center; }
+  .gauge .num { font-size: 2rem; font-weight: 700; }
+  .gauge .num .sur { color: var(--gris); font-size: 1rem; font-weight: 400; }
+  .gauge .lab { color: var(--gris); font-size: .82rem; margin-top: 2px; }
+  .gauge .lab strong { color: var(--blanc); display: block; font-size: .95rem; }
+  .methodo { color: var(--gris); font-size: .8rem; margin-top: 12px; }
+  .resume { margin: 14px 0 0; font-size: .95rem; }
+
+  /* ===== Blocs 2-4 ===== */
+  h2 { font-size: .85rem; margin: 26px 4px 8px; text-transform: uppercase;
+       letter-spacing: .14em; color: var(--blanc); }
+  h2 .point { color: var(--jaune); }
+  .trouve-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .trouve-grid { grid-template-columns: 1fr 1fr; } }
+  .trouve { border: 1px solid var(--ligne); border-radius: 12px; padding: 14px 16px; }
+  .trouve h3 { margin: 0 0 8px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; }
+  .trouve ul { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--gris); }
+  .trouve li { margin-top: 5px; }
+  .trouve li::first-line { color: var(--blanc); }
+  .trouve.vide { color: #8a8a8a; font-size: .85rem; }
+
+  .claim { border-left: 3px solid var(--jaune); padding: 4px 0 4px 14px; margin: 14px 0; }
+  .claim .texte { font-size: .95rem; }
+  .verdict { display: inline-block; background: var(--noir); border: 1px solid var(--blanc);
+             color: var(--blanc); border-radius: 999px; font-size: .74rem; text-transform: uppercase;
+             letter-spacing: .05em; padding: 4px 12px; margin-top: 8px; }
+  .verdict.v-jaune { border-color: var(--jaune); }
+  .role { display: inline-block; color: var(--noir); background: var(--jaune); border-radius: 999px;
+          font-size: .7rem; font-weight: 700; text-transform: uppercase; padding: 3px 10px;
+          margin-top: 8px; margin-left: 6px; }
+  .explication { color: var(--gris); font-size: .85rem; margin-top: 6px; }
+  .sources a { color: var(--blanc); text-decoration: underline; text-decoration-color: var(--jaune);
+               font-size: .82rem; display: block; margin-top: 4px; word-break: break-all; }
+  .sources a:hover { color: var(--jaune); }
+
+  .origine dt { color: var(--gris); font-size: .8rem; text-transform: uppercase;
+                letter-spacing: .08em; margin-top: 10px; }
+  .origine dd { margin: 2px 0 0; font-size: .92rem; }
+  .origine a { color: var(--blanc); text-decoration-color: var(--jaune); word-break: break-all; }
+
+  .timeline { list-style: none; padding: 0; margin: 14px 0 0; }
+  .timeline li { position: relative; padding: 0 0 16px 22px; border-left: 2px solid var(--ligne);
+                 margin-left: 8px; }
+  .timeline li:last-child { border-left-color: transparent; }
+  .timeline li::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px;
+                          height: 10px; border-radius: 50%; background: var(--jaune); }
+  .timeline .titre { font-size: .9rem; font-weight: 600; }
+  .timeline .date { color: var(--gris); font-size: .8rem; }
+  .timeline a { color: var(--blanc); text-decoration-color: var(--jaune); font-size: .8rem;
+                word-break: break-all; }
+
+  .media-bloc { border-top: 1px solid var(--ligne); margin-top: 14px; padding-top: 12px; }
+  .media-bloc img { max-width: 100%; border-radius: 10px; margin-top: 8px; }
+  .media-bloc .detail { color: var(--gris); font-size: .82rem; margin-top: 4px; }
+
+  .limits { color: var(--gris); font-size: .85rem; padding-left: 18px; margin: 8px 0 0; }
+  .limits li { margin-top: 5px; }
+
+  .conclusion { text-align: center; font-size: 1.1rem; font-weight: 700; margin: 26px 0 0; }
+  .conclusion .point { color: var(--jaune); }
+  .permalink { color: var(--blanc); text-decoration-color: var(--jaune); font-size: .88rem; }
+
+  /* Badge Powered by Mistral — logo officiel intact sur pastille blanche */
+  .powered { display: flex; align-items: center; justify-content: center; gap: 10px;
+             margin: 18px 0 0; }
+  .powered .label { color: var(--blanc); font-size: .78rem; letter-spacing: .08em;
+                    text-transform: uppercase; }
+  .powered .chip { display: inline-flex; align-items: center; background: var(--blanc);
+                   border-radius: 8px; padding: 8px 14px; }
+  .powered .chip svg { display: block; width: 84px; height: auto; }
+
+  footer { text-align: center; padding: 26px 16px 46px; border-top: 1px solid var(--ligne);
+           margin-top: 30px; }
+  footer .sig { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .9rem; }
+  footer .sig .point { color: var(--jaune); }
+  footer p { color: var(--gris); font-size: .76rem; max-width: 560px; margin: 10px auto 0; }
+  footer a { color: var(--blanc); text-decoration-color: var(--jaune); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <p class="wordmark">CHECK ÇA<span class="point">.</span></p>
+  <p class="signature">Avant de partager, vérifie.</p>
+  <h1 class="accroche">T'as vu passer ça<span class="point"> ?</span></h1>
+  <p class="sous-titre">On remonte à la source.</p>
+  <p class="explication">Colle le lien d'une publication, d'un article ou d'une vidéo.
+     On enquête sur l'information et on te donne les éléments pour te faire ton avis.</p>
+</header>
+<main>
+  <div class="box">
+    <form id="form">
+      <input id="url" type="url" placeholder="Colle ton lien ici…" required>
+      <button id="go" type="submit">Checker l'info ↗</button>
+    </form>
+    <p class="statut" id="statut" hidden>On remonte le fil… — à la recherche de la source originelle.</p>
+    <p class="hint">Posts X et pages web pour l'instant. Chaque analyse fait de vraies recherches : compte 30 secondes à 2 minutes. Analyses limitées en nombre.</p>
+    <p class="error" id="error" hidden></p>
+    <ol class="parcours">
+      <li><span class="etape-num">1.</span> Tu colles un lien.</li>
+      <li><span class="etape-num">2.</span> On remonte à l'origine.</li>
+      <li><span class="etape-num">3.</span> Tu accèdes aux preuves.</li>
+    </ol>
+  </div>
+
+  <div id="report" hidden>
+
+    <!-- Bloc 1 — Verdict et indice de confiance -->
+    <div class="box">
+      <div class="cartouche">
+        <p class="libelle" id="verdict-libelle"></p>
+        <p class="micro" id="verdict-micro"></p>
+      </div>
+      <p class="meta-analyse" id="meta-analyse"></p>
+      <div class="gauges" id="gauges"></div>
+      <p class="methodo">L'indice 0–100 n'est pas une probabilité statistique : il agrège les
+         verdicts des affirmations vérifiées sur le web et les signaux détectés sur les images.
+         Prototype v0.1 — méthode non calibrée, chaque critère reste expliqué et sourcé ci-dessous.</p>
+      <p class="resume" id="summary"></p>
+    </div>
+
+    <!-- Bloc 2 — Ce qu'on a trouvé -->
+    <div class="box">
+      <h2>Ce qu'on a trouvé<span class="point">.</span></h2>
+      <div class="trouve-grid">
+        <div class="trouve" id="etabli-box">
+          <h3>Ce qui est établi</h3>
+          <ul id="etabli"></ul>
+        </div>
+        <div class="trouve" id="faux-box">
+          <h3>Ce qui est faux ou trompeur</h3>
+          <ul id="faux"></ul>
+        </div>
+        <div class="trouve" id="contexte-box">
+          <h3>Le contexte qui manque</h3>
+          <ul id="contexte"></ul>
+        </div>
+        <div class="trouve" id="visuels-box">
+          <h3>Les visuels</h3>
+          <div id="visuels"></div>
+        </div>
+      </div>
+      <div id="limits-box" hidden>
+        <h3 style="margin-top:16px">Les limites de cette analyse</h3>
+        <ul class="limits" id="limits"></ul>
+      </div>
+    </div>
+
+    <!-- Bloc 3 — La source originelle -->
+    <div class="box">
+      <h2>La source originelle<span class="point">.</span></h2>
+      <dl class="origine" id="origine"></dl>
+      <ul class="timeline" id="timeline"></ul>
+      <p class="methodo" id="origine-note"></p>
+    </div>
+
+    <!-- Bloc 4 — Les sources de corroboration -->
+    <div class="box" id="corroboration-box">
+      <h2>Les sources de corroboration<span class="point">.</span></h2>
+      <p class="methodo" style="margin:0 0 4px">Sources primaires et médias indépendants,
+         avec leur rôle : confirment, nuancent ou contredisent.</p>
+      <div id="corroboration"></div>
+    </div>
+
+    <p class="conclusion" id="conclusion">Maintenant, tu sais<span class="point">.</span></p>
+    <p style="text-align:center"><a class="permalink" id="permalink" href="#" hidden>Lien permanent vers ce rapport</a></p>
+  </div>
+</main>
+<footer>
+  <p class="sig">Avant de partager, vérifie<span class="point">.</span></p>
+  <p>Check ça est un format Ulyces, développé en partenariat avec Mistral.
+     Une aide à la vérification, pas un jugement définitif : les verdicts reposent sur les
+     éléments disponibles au moment de l'analyse. Projet open source (AGPL-3.0) —
+     <a id="source-link" href="https://github.com/nprllc/check-ca">code source</a>.</p>
+  <p class="powered"><span class="label">Powered by</span>
+    <a class="chip" href="https://mistral.ai" target="_blank" rel="noopener" title="Mistral AI"><svg width="805" height="182" viewBox="0 0 805 182" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="52" y="26" width="26" height="26" fill="#FFAF01"/>
+<rect x="52" y="52" width="52" height="26" fill="#FF8204"/>
+<rect x="52" y="78" width="130" height="26" fill="#FA500F"/>
+<rect x="156" y="104" width="26" height="26" fill="#E61300"/>
+<rect x="104" y="104" width="26" height="26" fill="#E61300"/>
+<rect x="52" y="104" width="26" height="26" fill="#E61300"/>
+<rect x="130" y="130" width="78" height="26" fill="#C4001D"/>
+<rect x="26" y="130" width="78" height="26" fill="#C4001D"/>
+<rect x="130" y="52" width="52" height="26" fill="#FF8204"/>
+<rect x="156" y="26" width="26" height="26" fill="#FFAF01"/>
+<path d="M327.055 127.083H326.76L290.387 26H260V156H280.318V54.3723H280.454L316.873 155.637L317.009 156H335.899L372.454 54.3723H372.59V156H392.727V26H363.066L327.055 127.083Z" fill="#171722"/>
+<path d="M428.83 61.1038H408.511V156.006H428.83V61.1038Z" fill="#171722"/>
+<path d="M430.1 26H407.4V47.2482H430.1V26Z" fill="#171722"/>
+<path d="M508.45 105.46C503.62 103.328 497.225 101.31 489.424 99.4956L485.206 98.5885C480.013 97.5 475.931 96.5023 473.097 95.5952C470.33 94.7108 467.995 93.4636 466.158 91.8762C464.389 90.3342 463.527 88.2933 463.527 85.6401C463.527 81.8077 465.16 78.9958 468.539 77.0909C471.963 75.1407 476.249 74.1429 481.238 74.1429C493.347 74.1429 500.286 79.0865 502.441 89.223L502.531 89.6765H522.85L522.736 89.0189C520.764 78.066 515.843 70.1291 508.133 65.4124C500.468 60.741 491.669 58.3826 481.986 58.3826C471.691 58.3826 462.734 60.6956 455.364 65.231C447.903 69.8343 444.139 76.8868 444.139 86.1843C444.139 94.7561 447.359 101.242 453.708 105.482C459.967 109.655 468.267 112.875 478.403 115.075C484.957 116.412 489.991 117.569 493.347 118.544C496.658 119.497 499.425 120.902 501.534 122.717C503.62 124.508 504.618 126.798 504.618 129.678C504.618 133.896 502.872 137.094 499.289 139.429C495.683 141.788 490.898 142.99 485.07 142.99C479.582 142.99 474.503 141.584 469.922 138.772C465.387 136.005 462.053 131.107 460.035 124.213L459.922 123.805H439.785L439.943 124.485C442.642 136.89 448.288 145.802 456.747 150.995C465.137 156.142 474.752 158.75 485.274 158.75C495.796 158.75 505.162 156.324 512.713 151.539C520.355 146.709 524.21 139.271 524.21 129.497C524.21 123.306 522.782 118.249 519.993 114.44C517.203 110.653 513.326 107.659 508.427 105.482L508.45 105.46Z" fill="#171722"/>
+<path d="M566.163 32.395H545.845V61.0812H527.386V78.4743H545.664V137.116C545.664 144.328 547.387 149.339 550.811 152.015C554.19 154.646 559.769 155.984 567.433 155.984H589.022V137.479H569.452C566.98 137.479 565.823 136.323 565.823 133.851V78.4969H589.044V61.1038H566.209V32.395H566.163Z" fill="#171722"/>
+<path d="M629.23 65.1402C625.216 67.7481 622.721 71.5351 621.769 76.456L621.701 61.1038H601.564V156.006H621.882V105.369C621.882 97.1145 623.515 90.4929 626.713 85.6627C629.865 80.9233 635.556 78.5195 643.607 78.5195H657.689V61.1264H643.425C638.096 61.1264 633.311 62.487 629.23 65.1402Z" fill="#171722"/>
+<path d="M731.723 65.2763C724.171 60.6729 715.305 58.3599 705.236 58.3599C695.168 58.3599 686.188 60.6049 678.092 65.0042C669.928 69.4488 664.849 77.2723 662.989 88.2479L662.876 88.9055H683.194L683.285 88.452C684.351 83.4177 686.845 79.8121 690.768 77.7712C694.76 75.6849 699.431 74.6418 704.669 74.6418C709.431 74.6418 713.763 75.5942 717.572 77.4991C721.291 79.3586 723.106 82.3066 723.106 86.5018C723.106 89.1549 722.312 91.1278 720.656 92.5565C718.956 94.0305 716.756 95.1416 714.103 95.9126C711.404 96.6836 707.459 97.5227 702.379 98.3617L698.365 99.0874C690.678 100.425 684.169 102.013 678.999 103.759C673.761 105.55 669.135 108.589 665.234 112.784C661.311 117.025 659.338 122.921 659.338 130.359C659.338 139.021 662.536 146.006 668.863 151.085C675.144 156.142 683.149 158.705 692.605 158.705C699.612 158.705 705.871 157.231 711.246 154.351C716.529 151.493 720.656 146.935 723.491 140.813H723.65V155.983H743.243V89.6085C743.243 78.1113 739.365 69.925 731.723 65.2763ZM695.394 143.352C691.267 143.352 687.616 142.128 684.51 139.724C681.403 137.32 679.884 134.032 679.884 129.656C679.884 124.962 681.675 121.583 685.371 119.36C689.136 117.093 694.329 115.211 700.814 113.759L705.758 112.852C710.157 111.99 713.695 111.129 716.325 110.267C718.933 109.428 721.133 108.135 722.879 106.457H723.174V113.011C723.174 119.587 721.836 125.211 719.228 129.724C716.62 134.236 713.15 137.683 708.933 139.928C704.715 142.196 700.157 143.33 695.394 143.33V143.352Z" fill="#171722"/>
+<path d="M779.28 26H759.143V156H779.28V26Z" fill="#171722"/>
+</svg></a>
+  </p>
+</footer>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  /* Hébergement GitHub Pages : l'appelle à l'API Render en absolu */
+  var API_BASE = "https://check-ca.onrender.com";
+
+  /* Verdicts microcopy — toujours en toutes lettres */
+  var VERDICTS = {
+    supported:   { micro: "C'est confirmé.",            role: "Confirme" },
+    mixed:       { micro: "Attention, il manque du contexte.", role: "Nuance" },
+    contradicted:{ micro: "Non, ça ne tient pas.",       role: "Contredit" },
+    unverifiable:{ micro: "Impossible de trancher pour le moment.", role: "Non concluant" }
+  };
+  var KINDS = { post: "Publication du post", media: "Première apparition d'un média",
+                factcheck: "Fact-check publié" };
+
+  function el(tag, text, cls) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null && text !== "") node.textContent = text;
+    return node;
+  }
+  function link(href, text, cls) {
+    var a = el("a", text, cls);
+    a.href = href; a.target = "_blank"; a.rel = "noopener";
+    return a;
+  }
+  function fmtDate(iso) {
+    if (!iso) return "date inconnue";
+    try { return new Date(iso).toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" }); }
+    catch (e) { return iso; }
+  }
+
+  /* Verdict global : en toutes lettres, jamais porté par la seule couleur */
+  function verdictGlobal(s) {
+    var n = s.claim_solidity;
+    if (n === null || n === undefined) return { label: "On ne sait pas", micro: "Impossible de trancher pour le moment." };
+    if (n >= 75) return { label: "C'est vrai", micro: "C'est confirmé." };
+    if (n >= 50) return { label: "C'est trompeur", micro: "Attention, il manque du contexte." };
+    return { label: "C'est faux", micro: "Non, ça ne tient pas." };
+  }
+
+  function showGauge(parent, num, lab, valueName) {
+    var g = el("div", "", "gauge");
+    var n = el("div", "", "num");
+    n.appendChild(document.createTextNode((num === null || num === undefined) ? "—" : String(num)));
+    n.appendChild(el("span", " / 100", "sur"));
+    g.appendChild(n);
+    var l = el("div", "", "lab");
+    l.appendChild(document.createTextNode(lab));
+    if (valueName) l.appendChild(el("strong", valueName));
+    g.appendChild(l);
+    parent.appendChild(g);
+  }
+
+  function render(report) {
+    $("report").hidden = false;
+    var s = report.scores || {};
+    var v = verdictGlobal(s);
+    $("verdict-libelle").textContent = v.label.toUpperCase() + ".";
+    $("verdict-micro").textContent = v.micro;
+    $("meta-analyse").textContent = "Analyse Check ça du " + fmtDate(report.created_at) +
+      (report.post && report.post.author_name ? " — contenu publié par " + report.post.author_name : "") +
+      (report.post && report.post.published_at ? ", le " + fmtDate(report.post.published_at) : "");
+
+    var gauges = $("gauges");
+    gauges.textContent = "";
+    showGauge(gauges, s.claim_solidity, "Solidité de l'affirmation", s.claim_label);
+    showGauge(gauges, s.media_authenticity, "Authenticité des images", s.media_label);
+    $("summary").textContent = report.summary || "";
+
+    /* Bloc 2 : répartition des affirmations */
+    var etabli = [], faux = [], contexte = [];
+    (report.claims || []).forEach(function (c) {
+      var t = (c.verdict === "supported") ? etabli : (c.verdict === "mixed" || c.verdict === "contradicted") ? faux : contexte;
+      t.push(c);
+    });
+    function fillList(ulId, arr, boxId) {
+      var ul = $(ulId), box = $(boxId);
+      ul.textContent = "";
+      box.classList.toggle("vide", arr.length === 0);
+      if (arr.length === 0) { ul.appendChild(el("li", "Rien à signaler pour le moment.")); return; }
+      arr.forEach(function (c) {
+        var li = el("li", c.text);
+        if (c.verdict && VERDICTS[c.verdict]) li.appendChild(el("span", "  " + VERDICTS[c.verdict].micro));
+        ul.appendChild(li);
+      });
+    }
+    fillList("etabli", etabli, "etabli-box");
+    fillList("faux", faux, "faux-box");
+    fillList("contexte", contexte, "contexte-box");
+
+    /* Visuels */
+    var media = report.media || [];
+    $("visuels-box").hidden = media.length === 0;
+    var vw = $("visuels");
+    vw.textContent = "";
+    media.forEach(function (m) {
+      var div = el("div", "", "media-bloc");
+      if (m.error) {
+        div.appendChild(el("div", "Analyse impossible : " + m.error, "detail"));
+      } else {
+        var mm = m.media || {};
+        if (mm.kind === "image" && mm.url) {
+          var img = el("img"); img.src = mm.url; img.alt = mm.alt || "Image du post analysé";
+          img.loading = "lazy"; img.referrerPolicy = "no-referrer";
+          div.appendChild(img);
+        } else if (mm.kind === "video") {
+          div.appendChild(el("div", "Vidéo du post analysée.", "detail"));
+        }
+        var bits = [];
+        if (m.exif_ai_software) bits.push("Logiciel IA détecté dans les métadonnées : " + m.exif_ai_software);
+        if (m.c2pa_ai_generated) bits.push("Marqueur de génération IA (C2PA/IPTC).");
+        if (m.c2pa_camera_capture) bits.push("Content Credentials de prise de vue valide.");
+        if (m.ai_probability !== null && m.ai_probability !== undefined)
+          bits.push("Probabilité IA estimée : " + Math.round(m.ai_probability * 100) + "%.");
+        if (m.earliest_appearance && m.earliest_appearance.first_seen)
+          bits.push("Première apparition en ligne repérée le " + fmtDate(m.earliest_appearance.first_seen) + ".");
+        else if ((m.appearances || []).length === 0) bits.push("Aucune apparition antérieure repérée.");
+        bits.forEach(function (b) { div.appendChild(el("div", "• " + b, "detail")); });
+      }
+      vw.appendChild(div);
+    });
+
+    /* Bloc 3 : source originelle */
+    var og = $("origine");
+    og.textContent = "";
+    var p = report.post || {};
+    function addDt(label, value, node) {
+      og.appendChild(el("dt", label));
+      var dd = el("dd");
+      if (node) dd.appendChild(node); else dd.textContent = value || "—";
+      og.appendChild(dd);
+    }
+    addDt("Publication analysée", null, link(p.url || report.url, p.url || report.url));
+    if (p.author_name || p.author_handle)
+      addDt("Auteur", (p.author_name || "") + (p.author_handle ? " (@" + p.author_handle + ")" : ""));
+    addDt("Date de publication", p.published_at ? fmtDate(p.published_at) : "—");
+    addDt("Plateforme", p.platform === "x" ? "X (Twitter)" : p.platform === "web" ? "Page web" : (p.platform || "—"));
+
+    var tl = report.timeline || [];
+    var twrap = $("timeline");
+    twrap.textContent = "";
+    tl.forEach(function (event) {
+      var li = el("li");
+      li.appendChild(el("div", (KINDS[event.kind] || event.kind) + (event.detail ? " — " + event.detail : ""), "titre"));
+      li.appendChild(el("div", fmtDate(event.date), "date"));
+      if (event.url) li.appendChild(link(event.url, event.url));
+      twrap.appendChild(li);
+    });
+    $("origine-note").textContent = tl.length <= 1
+      ? "L'origine exacte n'a pas pu être établie au-delà de la publication analysée : à traiter avec prudence."
+      : "Quand l'origine exacte ne peut pas être établie, on le dit. Aucune source secondaire n'est présentée comme originelle.";
+
+    /* Bloc 4 : corroboration */
+    var cbox = $("corroboration-box"), cwrap = $("corroboration");
+    var claims = report.claims || [], fcs = report.factchecks || [];
+    cbox.hidden = claims.length === 0 && fcs.length === 0;
+    cwrap.textContent = "";
+    claims.forEach(function (c) {
+      var div = el("div", "", "claim");
+      div.appendChild(el("div", c.text, "texte"));
+      var vv = VERDICTS[c.verdict] || VERDICTS.unverifiable;
+      div.appendChild(el("span", vv.micro, "verdict " + (c.verdict === "supported" ? "v-jaune" : "")));
+      div.appendChild(el("span", vv.role, "role"));
+      if (c.explanation) div.appendChild(el("div", c.explanation, "explication"));
+      var sw = el("div", "", "sources");
+      (c.sources || []).forEach(function (src) { sw.appendChild(link(src.url, src.title || src.url)); });
+      if ((c.sources || []).length) div.appendChild(sw);
+      cwrap.appendChild(div);
+    });
+    fcs.forEach(function (fc) {
+      var div = el("div", "", "claim");
+      div.appendChild(el("div", fc.title || fc.claim_text || "Fact-check", "texte"));
+      div.appendChild(el("span", "Fact-check déjà publié", "verdict"));
+      div.appendChild(el("span", "Contredit", "role"));
+      div.appendChild(el("div", (fc.publisher ? fc.publisher + " — " : "") + (fc.rating || ""), "explication"));
+      if (fc.url) div.appendChild(link(fc.url, fc.url, ""));
+      cwrap.appendChild(div);
+    });
+
+    var limits = report.limits || [];
+    $("limits-box").hidden = limits.length === 0;
+    var lwrap = $("limits");
+    lwrap.textContent = "";
+    limits.forEach(function (l) { lwrap.appendChild(el("li", l)); });
+
+    var perm = $("permalink");
+    if (report.id) { perm.href = API_BASE + "/r/" + report.id; perm.hidden = false; }
+    if (!API_BASE) { window.history.replaceState(null, "", report.id ? "/r/" + report.id : "/"); }
+  }
+
+  function showError(message) {
+    var box = $("error");
+    box.textContent = message;
+    box.hidden = false;
+  }
+
+  $("form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    $("error").hidden = true;
+    $("statut").hidden = false;
+    $("report").hidden = true;
+    var button = $("go");
+    button.disabled = true;
+    button.textContent = "On remonte le fil…";
+    fetch(API_BASE + "/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: $("url").value.trim() })
+    }).then(function (resp) {
+      return resp.json().then(function (data) {
+        if (!resp.ok) throw new Error((data && data.detail) || ("erreur " + resp.status));
+        return data;
+      });
+    }).then(render).catch(function (err) {
+      showError(err && err.message ? err.message : "Analyse impossible, réessayez.");
+    }).finally(function () {
+      button.disabled = false;
+      button.textContent = "Checker l'info ↗";
+      $("statut").hidden = true;
+    });
+  });
+
+  var match = window.location.pathname.match(/^(?:\/check-ca)?\/r\/([a-z0-9]+)$/i);
+  if (match) {
+    var id = match[1];
+    fetch(API_BASE + "/api/reports/" + encodeURIComponent(id))
+      .then(function (resp) {
+        if (!resp.ok) throw new Error("rapport introuvable");
+        return resp.json();
+      })
+      .then(render)
+      .catch(function () {
+        showError("Ce rapport n'existe pas (ou plus) : les rapports sont conservés temporairement.");
+      });
+  }
+})();
+</script>
+</body>
+</html>

@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 
@@ -29,6 +30,14 @@ from app.store import Store
 INDEX = Path(__file__).parent / "static" / "index.html"
 
 app = FastAPI(title="Check ça", version="0.1.0")
+
+# CORS : autorise l'interface statique hébergée sur GitHub Pages à appeler l'API.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 store = Store(settings.db_path)
 
