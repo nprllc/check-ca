@@ -12,6 +12,7 @@ import re
 
 import httpx
 
+from app.analyzers.mistral import extract_texts_and_refs
 from app.config import Settings
 from app.models import Claim, Post, Source
 
@@ -132,18 +133,12 @@ def parse_mistral_response(data: dict) -> tuple[str, list[Claim], list[str]]:
     """Extraction depuis une réponse Mistral Conversations (outputs → chunks).
 
     Les chunks « text » portent la réponse du modèle, les chunks
-    « tool_reference » les sources consultées (url + titre).
+    « tool_reference » les sources consultées (url + titre). Selon les
+    réponses, content est une simple chaîne et les pages ouvertes via
+    open_url ne figurent que dans les tool.execution : le parcours
+    robuste est partagé dans app.analyzers.mistral.
     """
-    consulted: dict[str, str] = {}
-    texts: list[str] = []
-    for output in data.get("outputs") or []:
-        if output.get("type") != "message.output":
-            continue
-        for chunk in output.get("content") or []:
-            if chunk.get("type") == "text":
-                texts.append(chunk.get("text") or "")
-            elif chunk.get("type") == "tool_reference" and chunk.get("url"):
-                consulted.setdefault(chunk["url"], chunk.get("title") or "")
+    texts, consulted = extract_texts_and_refs(data)
     return _from_texts_and_consulted(texts, consulted)
 
 

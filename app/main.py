@@ -109,7 +109,7 @@ async def analyze(payload: AnalyzeRequest, request: Request) -> dict:
         return cached
 
     try:
-        async with httpx.AsyncClient(timeout=90.0, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=240.0, follow_redirects=True) as client:
             report = await run_analysis(url, settings, client)
     except UnsafeURL as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

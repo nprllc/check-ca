@@ -24,7 +24,6 @@ les verdicts web sont purement informatifs (affichés, non scorés).
 """
 from __future__ import annotations
 
-import json
 import re
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
@@ -32,6 +31,7 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.analyzers.media import _excluded, parse_loose_date
+from app.analyzers.mistral import extract_json_block, extract_texts_and_refs
 from app.config import Settings
 from app.models import MediaFinding, Post, TimelineEvent
 
@@ -103,29 +103,6 @@ def _normalize(url: str) -> str:
         return ""
     parts = urlsplit(url)
     return f"{parts.scheme.lower()}://{parts.netloc.lower()}{parts.path.rstrip('/')}"
-
-
-def _consulted_urls(data: dict) -> dict[str, str]:
-    """URLs réellement consultées pendant la recherche Mistral (url → titre)."""
-    consulted: dict[str, str] = {}
-    for output in data.get("outputs") or []:
-        if output.get("type") != "message.output":
-            continue
-        for chunk in output.get("content") or []:
-            if chunk.get("type") == "tool_reference" and chunk.get("url"):
-                consulted.setdefault(chunk["url"], chunk.get("title") or "")
-    return consulted
-
-
-def _texts(data: dict) -> list[str]:
-    texts: list[str] = []
-    for output in data.get("outputs") or []:
-        if output.get("type") != "message.output":
-            continue
-        for chunk in output.get("content") or []:
-            if chunk.get("type") == "text":
-                texts.append(chunk.get("text") or "")
-    return texts
 
 
 def clean_summary(summary: str) -> str:
@@ -223,36 +200,35 @@ def parse_mistral_response(data: dict, post: Post) -> tuple[str, list[TimelineEv
     Rend (résumé nettoyé, événements de partage, verdicts web par image).
     Seuls les partages et les sources réellement consultés sont retenus ;
     les URLs non consultées sont rejetées — on n'invente pas de source.
+    Le parcours (content en liste de chunks ou en chaîne brute, URLs
+    ouvertes via open_url) est géré par app.analyzers.mistral.
     """
-    consulted = _consulted_urls(data)
-    raw = _texts(data)
-    m = _JSON_BLOCK.search("\n".join(raw))
-    summary = clean_summary(" ".join(raw).replace(m.group(0), " ").strip()) if m else ""
-    events: list[TimelineEvent] = []
-    assessments: list[dict] = []
+    texts, consulted = extract_texts_and_refs(data)
+    full = "\n".join(texts)
+    block = extract_json_block(texts)
+    json_text = ""
+    m = _JSON_BLOCK.search(full)
     if m:
-        try:
-            payload = json.loads(m.group(1))
-        except json.JSONDecodeError:
-            payload = {}
-        summary = clean_summary((payload.get("summary") or "") or summary)
-        events, _ = _share_events(payload.get("shares") or [], post, consulted)
-        consulted_keys = {_normalize(u): u for u in consulted}
-        for item in payload.get("image_assessments") or []:
-            if not isinstance(item, dict):
-                continue
-            verdict = (item.get("verdict") or "").strip().lower()
-            if verdict not in _VERDICTS or verdict == "unknown":
-                continue
-            source = (item.get("source_url") or "").strip()
-            verified_source = consulted_keys.get(_normalize(source), "")
-            assessments.append({
-                "url": (item.get("url") or "").strip(),
-                "verdict": verdict,
-                "explanation": (item.get("explanation") or "").strip(),
-                "source_url": verified_source,
-                "source_title": consulted.get(verified_source, "") if verified_source else "",
-            })
+        json_text = m.group(0)
+    summary = clean_summary((block.get("summary") or "") or full.replace(json_text, " "))
+    events, _ = _share_events(block.get("shares") or [], post, consulted)
+    consulted_keys = {_normalize(u): u for u in consulted}
+    assessments: list[dict] = []
+    for item in block.get("image_assessments") or []:
+        if not isinstance(item, dict):
+            continue
+        verdict = (item.get("verdict") or "").strip().lower()
+        if verdict not in _VERDICTS or verdict == "unknown":
+            continue
+        source = (item.get("source_url") or "").strip()
+        verified_source = consulted_keys.get(_normalize(source), "")
+        assessments.append({
+            "url": (item.get("url") or "").strip(),
+            "verdict": verdict,
+            "explanation": (item.get("explanation") or "").strip(),
+            "source_url": verified_source,
+            "source_title": consulted.get(verified_source, "") if verified_source else "",
+        })
     return summary, events, assessments
 
 

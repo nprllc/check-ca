@@ -6,19 +6,17 @@ toujours trouvé s'il existe en ligne, même sans clé Google.
 """
 from __future__ import annotations
 
-import json
-import re
 import unicodedata
 
 import httpx
 
+from app.analyzers.mistral import extract_json_block, extract_texts_and_refs
 from app.config import Settings
 from app.models import FactCheck, Post
 from app.analyzers.media import parse_loose_date
 
 _BASE = "https://factchecktools.googleapis.com/v1alpha1/claims"
 _MISTRAL_URL = "https://api.mistral.ai/v1/conversations"
-_JSON_BLOCK = re.compile(r"<json>\s*(\{.*?\})\s*</json>", re.DOTALL)
 
 _STOPWORDS = {"les", "des", "une", "aux", "avec", "pour", "dans", "sur", "par", "que",
               "qui", "quoi", "cette", "après", "avant", "plus", "moins", "être", "avoir"}
@@ -116,14 +114,8 @@ Termine par un bloc <json>…</json> exactement au format :
 
 def _mistral_consulted(data: dict) -> set[str]:
     """URLs réellement consultées pendant la recherche Mistral."""
-    consulted: set[str] = set()
-    for output in data.get("outputs") or []:
-        if output.get("type") != "message.output":
-            continue
-        for chunk in output.get("content") or []:
-            if chunk.get("type") == "tool_reference" and chunk.get("url"):
-                consulted.add(chunk["url"].strip())
-    return consulted
+    _, refs = extract_texts_and_refs(data)
+    return set(refs)
 
 
 def _factcheck_context(post: Post) -> str:
@@ -139,19 +131,9 @@ def _factcheck_context(post: Post) -> str:
 def parse_factchecks_mistral(data: dict, post: Post) -> list[FactCheck]:
     """Fact-checks depuis une réponse Mistral ; seules les pages réellement
     consultées sont retenues — on n'invente jamais de source."""
-    texts: list[str] = []
-    for output in data.get("outputs") or []:
-        if output.get("type") != "message.output":
-            continue
-        for chunk in output.get("content") or []:
-            if chunk.get("type") == "text":
-                texts.append(chunk.get("text") or "")
-    m = _JSON_BLOCK.search("\n".join(texts))
-    if not m:
-        return []
-    try:
-        payload = json.loads(m.group(1))
-    except json.JSONDecodeError:
+    texts, _ = extract_texts_and_refs(data)
+    payload = extract_json_block(texts)
+    if not payload:
         return []
     consulted = _mistral_consulted(data)
     checks: list[FactCheck] = []
