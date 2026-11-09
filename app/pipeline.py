@@ -51,10 +51,10 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
     claims: list[Claim] = []
     media: list[MediaFinding] = []
     claim_task = None
-    if settings.anthropic_api_key:
+    if settings.mistral_api_key or settings.anthropic_api_key:
         claim_task = asyncio.ensure_future(analyze_claims(post, settings, client))
     else:
-        report.limits.append("Vérification des affirmations non configurée (clé ANTHROPIC_API_KEY absente)")
+        report.limits.append("Vérification des affirmations non configurée (clé MISTRAL_API_KEY ou ANTHROPIC_API_KEY absente)")
     media_tasks = [asyncio.ensure_future(analyze_media(item, post, settings, client))
                    for item in post.media]
 

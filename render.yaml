@@ -11,14 +11,16 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
-      - key: ANTHROPIC_API_KEY
+      - key: MISTRAL_API_KEY
         sync: false
       - key: GOOGLE_FACTCHECK_API_KEY
         sync: false
       - key: SERPAPI_API_KEY
         sync: false
-      - key: CLAUDE_MODEL
-        value: claude-sonnet-5-5
+      - key: MISTRAL_MODEL
+        value: mistral-medium-latest
+      - key: ANTHROPIC_API_KEY
+        sync: false
       - key: RATE_LIMIT_PER_HOUR
         value: "20"
       - key: MAX_ANALYSES_PER_DAY

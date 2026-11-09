@@ -69,7 +69,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "version": "0.1.0",
-        "affirmations": bool(settings.anthropic_api_key),
+        "affirmations": bool(settings.mistral_api_key or settings.anthropic_api_key),
         "factchecks": bool(settings.google_factcheck_api_key),
         "recherche inversée": bool(settings.serpapi_api_key),
         "détecteur IA": bool(settings.ai_detector_url),

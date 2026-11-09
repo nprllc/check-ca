@@ -11,6 +11,8 @@ def _env(name: str, default: str = "") -> str:
 
 @dataclass
 class Settings:
+    mistral_api_key: str = field(default_factory=lambda: _env("MISTRAL_API_KEY"))
+    mistral_model: str = field(default_factory=lambda: _env("MISTRAL_MODEL", "mistral-medium-latest"))
     anthropic_api_key: str = field(default_factory=lambda: _env("ANTHROPIC_API_KEY"))
     claude_model: str = field(default_factory=lambda: _env("CLAUDE_MODEL", "claude-sonnet-5-5"))
     google_factcheck_api_key: str = field(default_factory=lambda: _env("GOOGLE_FACTCHECK_API_KEY"))

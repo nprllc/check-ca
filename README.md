@@ -34,7 +34,7 @@ docker run -p 8000:8000 --env-file .env -v checkca-data:/data check-ca
 | --- | --- | --- | --- |
 | Récupération des posts X | FxTwitter (public, non officiel) | — | toujours actif |
 | Pages web | balises Open Graph | — | toujours actif |
-| Affirmations | Claude API + outil `web_search` | `ANTHROPIC_API_KEY` | désactivé |
+| Affirmations | Mistral Conversations API + outil `web_search` (repli : Claude/Anthropic) | `MISTRAL_API_KEY` | désactivé |
 | Fact-checks existants | Google Fact Check Tools | `GOOGLE_FACTCHECK_API_KEY` | désactivé |
 | Recherche inversée | SerpApi (Google Lens) | `SERPAPI_API_KEY` | désactivé |
 | Probabilité IA | endpoint configurable | `AI_DETECTOR_URL` | désactivé |
