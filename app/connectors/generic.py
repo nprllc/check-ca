@@ -10,21 +10,23 @@ from app.analyzers.media import parse_loose_date
 from app.connectors.base import Connector, ConnectorError
 from app.models import MediaItem, Post
 
-_TAG = re.compile(
-    r"<meta\s+[^>]*property=[\"'](?P<prop>og:[a-zA-Z:]+|article:published_time)[\"'][^>]*"
-    r"(?:content=[\"'](?P<content1>[^\"']*)[\"'])?[^>]*>", re.IGNORECASE)
+_TAG = re.compile(r"<meta\s[^>]*>", re.IGNORECASE)
+_PROP = re.compile(r"property=[\"']([^\"']+)[\"']", re.IGNORECASE)
+_CONT = re.compile(r"content=[\"']([^\"']*)[\"']", re.IGNORECASE)
 
 
 def _og_tags(html: str) -> dict[str, str]:
+    """Extrait les balises Open Graph, quel que soit l'ordre des attributs."""
     tags: dict[str, str] = {}
     for m in _TAG.finditer(html):
-        prop = m.group("prop").lower()
-        content = m.group("content1")
-        if content is None:  # attribut content avant property
-            after = html[m.end():m.end() + 300]
-            cm = re.search(r"content=[\"']([^\"']*)[\"']", after, re.IGNORECASE)
-            content = cm.group(1) if cm else ""
-        tags.setdefault(prop, content)
+        pm = _PROP.search(m.group(0))
+        if not pm:
+            continue
+        prop = pm.group(1).lower()
+        if not (prop.startswith("og:") or prop == "article:published_time"):
+            continue
+        cm = _CONT.search(m.group(0))
+        tags.setdefault(prop, cm.group(1) if cm else "")
     return tags
 
 
