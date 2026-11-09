@@ -3,120 +3,252 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Check ça — Fiabilité d'un post en un lien</title>
-<meta name="description" content="Collez le lien d'un post ou d'un article : Check ça vérifie ses affirmations, analyse ses images et reconstitue la chronologie de l'info.">
+<title>Check ça. — Avant de partager, vérifie.</title>
+<meta name="description" content="Colle le lien d'une publication, d'un article ou d'une vidéo. On enquête sur l'information et on te donne les éléments pour te faire ton avis.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  /* ===== Charte Check ça : noir, blanc, jaune Ulyces #FAC51D — Lexend ===== */
   :root {
-    --bg: #0e1116; --card: #171c24; --line: #262d38; --text: #e8ecf1;
-    --muted: #9aa5b1; --accent: #4f8cff; --ok: #2fbf71; --warn: #f0a500; --bad: #ef5350;
+    --noir: #000000; --blanc: #FFFFFF; --jaune: #FAC51D;
+    --gris: #b9b9b9; --ligne: #ffffff26; --jaune-16: #fac51d29;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-         background: var(--bg); color: var(--text); line-height: 1.55; }
-  header { padding: 28px 20px 10px; text-align: center; }
-  h1 { margin: 0; font-size: 2rem; letter-spacing: .5px; }
-  h1 span { color: var(--accent); }
-  .tagline { color: var(--muted); margin: 8px auto 0; max-width: 640px; }
-  main { max-width: 760px; margin: 0 auto; padding: 12px 20px 60px; }
-  .box { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-         padding: 20px; margin-top: 16px; }
+  html { background: var(--noir); }
+  body { margin: 0; background: var(--noir); color: var(--blanc);
+         font-family: "Lexend", system-ui, sans-serif; line-height: 1.5; }
+  b, strong, h1, h2, h3, .verdict, button, .etape-num { font-weight: 700; }
+
+  header { padding: 40px 20px 8px; text-align: center; }
+  .wordmark { font-size: 1.3rem; letter-spacing: .06em; }
+  .wordmark .point { color: var(--jaune); }
+  .signature { color: var(--gris); font-size: .8rem; letter-spacing: .12em;
+               text-transform: uppercase; margin: 6px 0 0; }
+  .accroche { font-size: clamp(2rem, 7vw, 4.2rem); line-height: 1.02; margin: 44px 0 0;
+              text-transform: uppercase; letter-spacing: .01em; }
+  .accroche .point { color: var(--jaune); }
+  .sous-titre { font-size: clamp(1.05rem, 3vw, 1.35rem); font-weight: 600; margin: 14px 0 0; }
+  .explication { color: var(--gris); max-width: 620px; margin: 18px auto 0; font-size: .98rem; }
+
+  main { max-width: 780px; margin: 0 auto; padding: 20px 20px 70px; }
+
+  .box { background: var(--noir); border: 2px solid var(--ligne); border-radius: 16px;
+         padding: 22px; margin-top: 18px; }
   form { display: flex; gap: 10px; flex-wrap: wrap; }
-  input[type=url] { flex: 1 1 320px; padding: 13px 15px; border-radius: 10px; border: 1px solid var(--line);
-                    background: var(--bg); color: var(--text); font-size: 1rem; }
-  button { padding: 13px 22px; border: 0; border-radius: 10px; background: var(--accent); color: #fff;
-           font-size: 1rem; font-weight: 600; cursor: pointer; }
+  input[type=url] { flex: 1 1 300px; padding: 15px 16px; border-radius: 12px;
+                    border: 2px solid var(--ligne); background: var(--noir); color: var(--blanc);
+                    font-family: inherit; font-size: 1rem; }
+  input[type=url]:focus { outline: none; border-color: var(--jaune); }
+  input[type=url]::placeholder { color: #8a8a8a; }
+  button { padding: 15px 24px; border: 0; border-radius: 12px; background: var(--jaune);
+           color: var(--noir); font-family: inherit; font-size: .95rem; text-transform: uppercase;
+           letter-spacing: .05em; cursor: pointer; }
+  button:hover { filter: brightness(1.06); }
   button:disabled { opacity: .6; cursor: wait; }
-  .hint { color: var(--muted); font-size: .85rem; margin-top: 8px; }
-  .error { color: var(--bad); margin-top: 10px; }
-  .gauges { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 14px; }
-  .gauge { flex: 1 1 200px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+  .hint { color: var(--gris); font-size: .82rem; margin: 10px 0 0; }
+  .error { color: var(--blanc); background: var(--jaune-16); border-left: 4px solid var(--jaune);
+           padding: 10px 12px; margin-top: 12px; font-size: .9rem; }
+  .statut { margin-top: 12px; font-size: .9rem; color: var(--gris); }
+  .statut[hidden] { display: none; }
+
+  /* Parcours pédagogique */
+  .parcours { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+              margin-top: 26px; padding: 0; list-style: none; }
+  .parcours li { display: flex; align-items: center; gap: 10px; font-size: .85rem;
+                 border: 1px solid var(--ligne); border-radius: 999px; padding: 8px 16px; }
+  .etape-num { color: var(--jaune); }
+
+  /* ===== Bloc 1 : verdict ===== */
+  .cartouche { display: inline-block; background: var(--noir); border: 2px solid var(--jaune);
+               border-radius: 14px; padding: 14px 22px; }
+  .cartouche .libelle { font-size: clamp(1.2rem, 4vw, 1.9rem); text-transform: uppercase;
+                        letter-spacing: .03em; }
+  .cartouche .libelle .point { color: var(--jaune); }
+  .cartouche .micro { color: var(--gris); font-size: .85rem; font-weight: 400; margin: 6px 0 0; }
+  .meta-analyse { color: var(--gris); font-size: .82rem; margin: 10px 0 0; }
+  .gauges { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 16px; }
+  .gauge { flex: 1 1 190px; border: 1px solid var(--ligne); border-radius: 12px;
            padding: 14px; text-align: center; }
   .gauge .num { font-size: 2rem; font-weight: 700; }
-  .gauge .lab { color: var(--muted); font-size: .9rem; margin-top: 2px; }
-  .ok .num, .ok .lab strong { color: var(--ok); }
-  .warn .num, .warn .lab strong { color: var(--warn); }
-  .bad .num, .bad .lab strong { color: var(--bad); }
-  h2 { font-size: 1.05rem; margin: 22px 0 6px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
-  .claim { border-left: 3px solid var(--line); padding: 8px 0 8px 14px; margin: 10px 0; }
-  .claim .verdict { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; }
-  .v-supported { background: rgba(47,191,113,.18); color: var(--ok); }
-  .v-mixed { background: rgba(240,165,0,.18); color: var(--warn); }
-  .v-contradicted { background: rgba(239,83,80,.18); color: var(--bad); }
-  .v-unverifiable { background: rgba(154,165,177,.18); color: var(--muted); }
-  .sources a { color: var(--accent); text-decoration: none; font-size: .85rem; display: block; margin-top: 4px; }
-  .sources a:hover { text-decoration: underline; }
-  .timeline { list-style: none; padding: 0; margin: 0; }
-  .timeline li { position: relative; padding: 0 0 14px 22px; border-left: 2px solid var(--line); margin-left: 8px; }
+  .gauge .num .sur { color: var(--gris); font-size: 1rem; font-weight: 400; }
+  .gauge .lab { color: var(--gris); font-size: .82rem; margin-top: 2px; }
+  .gauge .lab strong { color: var(--blanc); display: block; font-size: .95rem; }
+  .methodo { color: var(--gris); font-size: .8rem; margin-top: 12px; }
+  .resume { margin: 14px 0 0; font-size: .95rem; }
+
+  /* ===== Blocs 2-4 ===== */
+  h2 { font-size: .85rem; margin: 26px 4px 8px; text-transform: uppercase;
+       letter-spacing: .14em; color: var(--blanc); }
+  h2 .point { color: var(--jaune); }
+  .trouve-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .trouve-grid { grid-template-columns: 1fr 1fr; } }
+  .trouve { border: 1px solid var(--ligne); border-radius: 12px; padding: 14px 16px; }
+  .trouve h3 { margin: 0 0 8px; font-size: .8rem; text-transform: uppercase; letter-spacing: .1em; }
+  .trouve ul { margin: 0; padding-left: 18px; font-size: .88rem; color: var(--gris); }
+  .trouve li { margin-top: 5px; }
+  .trouve li::first-line { color: var(--blanc); }
+  .trouve.vide { color: #8a8a8a; font-size: .85rem; }
+
+  .claim { border-left: 3px solid var(--jaune); padding: 4px 0 4px 14px; margin: 14px 0; }
+  .claim .texte { font-size: .95rem; }
+  .verdict { display: inline-block; background: var(--noir); border: 1px solid var(--blanc);
+             color: var(--blanc); border-radius: 999px; font-size: .74rem; text-transform: uppercase;
+             letter-spacing: .05em; padding: 4px 12px; margin-top: 8px; }
+  .verdict.v-jaune { border-color: var(--jaune); }
+  .role { display: inline-block; color: var(--noir); background: var(--jaune); border-radius: 999px;
+          font-size: .7rem; font-weight: 700; text-transform: uppercase; padding: 3px 10px;
+          margin-top: 8px; margin-left: 6px; }
+  .explication { color: var(--gris); font-size: .85rem; margin-top: 6px; }
+  .sources a { color: var(--blanc); text-decoration: underline; text-decoration-color: var(--jaune);
+               font-size: .82rem; display: block; margin-top: 4px; word-break: break-all; }
+  .sources a:hover { color: var(--jaune); }
+
+  .origine dt { color: var(--gris); font-size: .8rem; text-transform: uppercase;
+                letter-spacing: .08em; margin-top: 10px; }
+  .origine dd { margin: 2px 0 0; font-size: .92rem; }
+  .origine a { color: var(--blanc); text-decoration-color: var(--jaune); word-break: break-all; }
+
+  .timeline { list-style: none; padding: 0; margin: 14px 0 0; }
+  .timeline li { position: relative; padding: 0 0 16px 22px; border-left: 2px solid var(--ligne);
+                 margin-left: 8px; }
   .timeline li:last-child { border-left-color: transparent; }
-  .timeline li::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px; height: 10px;
-                          border-radius: 50%; background: var(--accent); }
-  .timeline .date { color: var(--muted); font-size: .82rem; }
-  .limits { color: var(--muted); font-size: .85rem; }
-  .limits li { margin-top: 4px; }
-  .media img { max-width: 100%; border-radius: 8px; margin-top: 6px; }
-  .muted { color: var(--muted); }
-  .permalink { color: var(--accent); text-decoration: none; font-size: .9rem; }
-  footer { text-align: center; color: var(--muted); font-size: .8rem; padding: 24px 16px 40px; }
-  footer a { color: var(--accent); text-decoration: none; }
+  .timeline li::before { content: ""; position: absolute; left: -6px; top: 4px; width: 10px;
+                          height: 10px; border-radius: 50%; background: var(--jaune); }
+  .timeline .titre { font-size: .9rem; font-weight: 600; }
+  .timeline .date { color: var(--gris); font-size: .8rem; }
+  .timeline a { color: var(--blanc); text-decoration-color: var(--jaune); font-size: .8rem;
+                word-break: break-all; }
+
+  .media-bloc { border-top: 1px solid var(--ligne); margin-top: 14px; padding-top: 12px; }
+  .media-bloc img { max-width: 100%; border-radius: 10px; margin-top: 8px; }
+  .media-bloc .detail { color: var(--gris); font-size: .82rem; margin-top: 4px; }
+
+  .limits { color: var(--gris); font-size: .85rem; padding-left: 18px; margin: 8px 0 0; }
+  .limits li { margin-top: 5px; }
+
+  .conclusion { text-align: center; font-size: 1.1rem; font-weight: 700; margin: 26px 0 0; }
+  .conclusion .point { color: var(--jaune); }
+  .permalink { color: var(--blanc); text-decoration-color: var(--jaune); font-size: .88rem; }
+
+  footer { text-align: center; padding: 26px 16px 46px; border-top: 1px solid var(--ligne);
+           margin-top: 30px; }
+  footer .sig { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; font-size: .9rem; }
+  footer .sig .point { color: var(--jaune); }
+  footer p { color: var(--gris); font-size: .76rem; max-width: 560px; margin: 10px auto 0; }
+  footer a { color: var(--blanc); text-decoration-color: var(--jaune); }
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <header>
-  <h1>Check <span>ça</span></h1>
-  <p class="tagline">Collez le lien d'un post ou d'un article. Check ça vérifie ses affirmations sur le web, analyse ses images et reconstitue la chronologie de l'info. Une aide à la vérification, pas un jugement définitif.</p>
+  <p class="wordmark">CHECK ÇA<span class="point">.</span></p>
+  <p class="signature">Avant de partager, vérifie.</p>
+  <h1 class="accroche">T'as vu passer ça<span class="point"> ?</span></h1>
+  <p class="sous-titre">On remonte à la source.</p>
+  <p class="explication">Colle le lien d'une publication, d'un article ou d'une vidéo.
+     On enquête sur l'information et on te donne les éléments pour te faire ton avis.</p>
 </header>
 <main>
   <div class="box">
     <form id="form">
-      <input id="url" type="url" placeholder="https://x.com/… ou l'adresse d'un article" required>
-      <button id="go" type="submit">Vérifier</button>
+      <input id="url" type="url" placeholder="Colle ton lien ici…" required>
+      <button id="go" type="submit">Checker l'info ↗</button>
     </form>
-    <p class="hint">Posts X et pages web pour l'instant. Les analyses sont limitées en nombre.</p>
+    <p class="statut" id="statut" hidden>On remonte le fil… — à la recherche de la source originelle.</p>
+    <p class="hint">Posts X et pages web pour l'instant. Chaque analyse fait de vraies recherches : compte 30 secondes à 2 minutes. Analyses limitées en nombre.</p>
     <p class="error" id="error" hidden></p>
+    <ol class="parcours">
+      <li><span class="etape-num">1.</span> Tu colles un lien.</li>
+      <li><span class="etape-num">2.</span> On remonte à l'origine.</li>
+      <li><span class="etape-num">3.</span> Tu accèdes aux preuves.</li>
+    </ol>
   </div>
+
   <div id="report" hidden>
+
+    <!-- Bloc 1 — Verdict et indice de confiance -->
     <div class="box">
+      <div class="cartouche">
+        <p class="libelle" id="verdict-libelle"></p>
+        <p class="micro" id="verdict-micro"></p>
+      </div>
+      <p class="meta-analyse" id="meta-analyse"></p>
       <div class="gauges" id="gauges"></div>
-      <p id="summary" style="margin-top:14px"></p>
+      <p class="methodo">L'indice 0–100 n'est pas une probabilité statistique : il agrège les
+         verdicts des affirmations vérifiées sur le web et les signaux détectés sur les images.
+         Prototype v0.1 — méthode non calibrée, chaque critère reste expliqué et sourcé ci-dessous.</p>
+      <p class="resume" id="summary"></p>
     </div>
-    <div class="box" id="claims-box" hidden>
-      <h2>Affirmations</h2>
-      <div id="claims"></div>
+
+    <!-- Bloc 2 — Ce qu'on a trouvé -->
+    <div class="box">
+      <h2>Ce qu'on a trouvé<span class="point">.</span></h2>
+      <div class="trouve-grid">
+        <div class="trouve" id="etabli-box">
+          <h3>Ce qui est établi</h3>
+          <ul id="etabli"></ul>
+        </div>
+        <div class="trouve" id="faux-box">
+          <h3>Ce qui est faux ou trompeur</h3>
+          <ul id="faux"></ul>
+        </div>
+        <div class="trouve" id="contexte-box">
+          <h3>Le contexte qui manque</h3>
+          <ul id="contexte"></ul>
+        </div>
+        <div class="trouve" id="visuels-box">
+          <h3>Les visuels</h3>
+          <div id="visuels"></div>
+        </div>
+      </div>
+      <div id="limits-box" hidden>
+        <h3 style="margin-top:16px">Les limites de cette analyse</h3>
+        <ul class="limits" id="limits"></ul>
+      </div>
     </div>
-    <div class="box" id="factchecks-box" hidden>
-      <h2>Fact-checks déjà publiés</h2>
-      <div id="factchecks"></div>
-    </div>
-    <div class="box" id="media-box" hidden>
-      <h2>Images et vidéos</h2>
-      <div id="media"></div>
-    </div>
-    <div class="box" id="timeline-box" hidden>
-      <h2>Chronologie</h2>
+
+    <!-- Bloc 3 — La source originelle -->
+    <div class="box">
+      <h2>La source originelle<span class="point">.</span></h2>
+      <dl class="origine" id="origine"></dl>
       <ul class="timeline" id="timeline"></ul>
+      <p class="methodo" id="origine-note"></p>
     </div>
-    <div class="box" id="limits-box" hidden>
-      <h2>Limites de cette analyse</h2>
-      <ul class="limits" id="limits"></ul>
+
+    <!-- Bloc 4 — Les sources de corroboration -->
+    <div class="box" id="corroboration-box">
+      <h2>Les sources de corroboration<span class="point">.</span></h2>
+      <p class="methodo" style="margin:0 0 4px">Sources primaires et médias indépendants,
+         avec leur rôle : confirment, nuancent ou contredisent.</p>
+      <div id="corroboration"></div>
     </div>
+
+    <p class="conclusion" id="conclusion">Maintenant, tu sais<span class="point">.</span></p>
     <p style="text-align:center"><a class="permalink" id="permalink" href="#" hidden>Lien permanent vers ce rapport</a></p>
   </div>
 </main>
 <footer>
-  Check ça est une aide à la vérification, pas un jugement définitif. Projet open source (AGPL-3.0) —
-  <a id="source-link" href="https://github.com/nprllc/check-ca">Code source</a>
+  <p class="sig">Avant de partager, vérifie<span class="point">.</span></p>
+  <p>Check ça est un format Ulyces, développé en partenariat avec Mistral.
+     Une aide à la vérification, pas un jugement définitif : les verdicts reposent sur les
+     éléments disponibles au moment de l'analyse. Projet open source (AGPL-3.0) —
+     <a id="source-link" href="https://github.com/nprllc/check-ca">code source</a>.</p>
 </footer>
 <script>
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
+
+  /* Verdicts microcopy — toujours en toutes lettres */
   var VERDICTS = {
-    supported: ["Confirmée", "v-supported"],
-    mixed: ["Partiellement vérifiée", "v-mixed"],
-    contradicted: ["Contredite", "v-contradicted"],
-    unverifiable: ["Non vérifiable", "v-unverifiable"]
+    supported:   { micro: "C'est confirmé.",            role: "Confirme" },
+    mixed:       { micro: "Attention, il manque du contexte.", role: "Nuance" },
+    contradicted:{ micro: "Non, ça ne tient pas.",       role: "Contredit" },
+    unverifiable:{ micro: "Impossible de trancher pour le moment.", role: "Non concluant" }
   };
-  var KINDS = { post: "Publication du post", media: "Première apparition d'un média", factcheck: "Fact-check publié" };
+  var KINDS = { post: "Publication du post", media: "Première apparition d'un média",
+                factcheck: "Fact-check publié" };
 
   function el(tag, text, cls) {
     var node = document.createElement(tag);
@@ -124,18 +256,10 @@
     if (text !== undefined && text !== null && text !== "") node.textContent = text;
     return node;
   }
-  function link(href, text) {
-    var a = el("a", text);
-    a.href = href;
-    a.target = "_blank";
-    a.rel = "noopener";
+  function link(href, text, cls) {
+    var a = el("a", text, cls);
+    a.href = href; a.target = "_blank"; a.rel = "noopener";
     return a;
-  }
-  function tone(score) {
-    if (score === null || score === undefined) return "";
-    if (score >= 71) return "ok";
-    if (score >= 31) return "warn";
-    return "bad";
   }
   function fmtDate(iso) {
     if (!iso) return "date inconnue";
@@ -143,13 +267,24 @@
     catch (e) { return iso; }
   }
 
+  /* Verdict global : en toutes lettres, jamais porté par la seule couleur */
+  function verdictGlobal(s) {
+    var n = s.claim_solidity;
+    if (n === null || n === undefined) return { label: "On ne sait pas", micro: "Impossible de trancher pour le moment." };
+    if (n >= 75) return { label: "C'est vrai", micro: "C'est confirmé." };
+    if (n >= 50) return { label: "C'est trompeur", micro: "Attention, il manque du contexte." };
+    return { label: "C'est faux", micro: "Non, ça ne tient pas." };
+  }
+
   function showGauge(parent, num, lab, valueName) {
-    var g = el("div", "", "gauge " + tone(num));
-    g.appendChild(el("div", (num === null || num === undefined) ? "—" : String(num), "num"));
+    var g = el("div", "", "gauge");
+    var n = el("div", "", "num");
+    n.appendChild(document.createTextNode((num === null || num === undefined) ? "—" : String(num)));
+    n.appendChild(el("span", " / 100", "sur"));
+    g.appendChild(n);
     var l = el("div", "", "lab");
     l.appendChild(document.createTextNode(lab));
-    var strong = el("strong");
-    strong.textContent = valueName || "";
+    if (valueName) l.appendChild(el("strong", valueName));
     g.appendChild(l);
     parent.appendChild(g);
   }
@@ -157,84 +292,134 @@
   function render(report) {
     $("report").hidden = false;
     var s = report.scores || {};
+    var v = verdictGlobal(s);
+    $("verdict-libelle").textContent = v.label.toUpperCase() + ".";
+    $("verdict-micro").textContent = v.micro;
+    $("meta-analyse").textContent = "Analyse Check ça du " + fmtDate(report.created_at) +
+      (report.post && report.post.author_name ? " — contenu publié par " + report.post.author_name : "") +
+      (report.post && report.post.published_at ? ", le " + fmtDate(report.post.published_at) : "");
+
     var gauges = $("gauges");
     gauges.textContent = "";
     showGauge(gauges, s.claim_solidity, "Solidité de l'affirmation", s.claim_label);
     showGauge(gauges, s.media_authenticity, "Authenticité des images", s.media_label);
-    var conf = el("div", "", "gauge " + (s.confidence === "high" ? "ok" : "warn"));
-    conf.appendChild(el("div", s.confidence === "high" ? "Haute" : "Faible", "num"));
-    conf.appendChild(el("div", "Confiance de l'analyse", "lab"));
-    gauges.appendChild(conf);
     $("summary").textContent = report.summary || "";
 
-    var claims = report.claims || [];
-    var cbox = $("claims-box"), cwrap = $("claims");
-    cbox.hidden = claims.length === 0;
-    cwrap.textContent = "";
-    claims.forEach(function (claim) {
-      var v = VERDICTS[claim.verdict] || VERDICTS.unverifiable;
-      var div = el("div", "", "claim");
-      div.appendChild(el("div", claim.text));
-      var badge = el("span", v[0], "verdict " + v[1]);
-      div.appendChild(badge);
-      if (claim.explanation) div.appendChild(el("div", claim.explanation, "muted"));
-      (claim.sources || []).forEach(function (src) {
-        div.appendChild(link(src.url, (src.title || src.url)));
+    /* Bloc 2 : répartition des affirmations */
+    var etabli = [], faux = [], contexte = [];
+    (report.claims || []).forEach(function (c) {
+      var t = (c.verdict === "supported") ? etabli : (c.verdict === "mixed" || c.verdict === "contradicted") ? faux : contexte;
+      t.push(c);
+    });
+    function fillList(ulId, arr, boxId) {
+      var ul = $(ulId), box = $(boxId);
+      ul.textContent = "";
+      box.classList.toggle("vide", arr.length === 0);
+      if (arr.length === 0) { ul.appendChild(el("li", "Rien à signaler pour le moment.")); return; }
+      arr.forEach(function (c) {
+        var li = el("li", c.text);
+        if (c.verdict && VERDICTS[c.verdict]) li.appendChild(el("span", "  " + VERDICTS[c.verdict].micro));
+        ul.appendChild(li);
       });
-      cwrap.appendChild(div);
-    });
+    }
+    fillList("etabli", etabli, "etabli-box");
+    fillList("faux", faux, "faux-box");
+    fillList("contexte", contexte, "contexte-box");
 
-    var fcs = report.factchecks || [];
-    $("factchecks-box").hidden = fcs.length === 0;
-    var fwrap = $("factchecks");
-    fwrap.textContent = "";
-    fcs.forEach(function (fc) {
-      var div = el("div", "", "claim");
-      div.appendChild(el("div", fc.title || fc.claim_text || "Fact-check"));
-      div.appendChild(el("div", (fc.publisher ? fc.publisher + " — " : "") + (fc.rating || ""), "muted"));
-      if (fc.url) div.appendChild(link(fc.url, fc.url));
-      fwrap.appendChild(div);
-    });
-
+    /* Visuels */
     var media = report.media || [];
-    $("media-box").hidden = media.length === 0;
-    var mwrap = $("media");
-    mwrap.textContent = "";
+    $("visuels-box").hidden = media.length === 0;
+    var vw = $("visuels");
+    vw.textContent = "";
     media.forEach(function (m) {
-      var div = el("div", "", "media");
-      div.appendChild(el("div", m.error ? ("Analyse impossible : " + m.error) : (m.media && m.media.url) || "", "muted"));
-      if (!m.error) {
+      var div = el("div", "", "media-bloc");
+      if (m.error) {
+        div.appendChild(el("div", "Analyse impossible : " + m.error, "detail"));
+      } else {
+        var mm = m.media || {};
+        if (mm.kind === "image" && mm.url) {
+          var img = el("img"); img.src = mm.url; img.alt = mm.alt || "Image du post analysé";
+          img.loading = "lazy"; img.referrerPolicy = "no-referrer";
+          div.appendChild(img);
+        } else if (mm.kind === "video") {
+          div.appendChild(el("div", "Vidéo du post analysée.", "detail"));
+        }
         var bits = [];
-        if (m.exif_ai_software) bits.push("logiciel IA détecté dans les métadonnées : " + m.exif_ai_software);
-        if (m.c2pa_ai_generated) bits.push("marqueur de génération IA (C2PA/IPTC)");
-        if (m.c2pa_camera_capture) bits.push("Content Credentials de prise de vue valide");
+        if (m.exif_ai_software) bits.push("Logiciel IA détecté dans les métadonnées : " + m.exif_ai_software);
+        if (m.c2pa_ai_generated) bits.push("Marqueur de génération IA (C2PA/IPTC).");
+        if (m.c2pa_camera_capture) bits.push("Content Credentials de prise de vue valide.");
         if (m.ai_probability !== null && m.ai_probability !== undefined)
-          bits.push("probabilité IA estimée : " + Math.round(m.ai_probability * 100) + "%");
+          bits.push("Probabilité IA estimée : " + Math.round(m.ai_probability * 100) + "%.");
         if (m.earliest_appearance && m.earliest_appearance.first_seen)
-          bits.push("première apparition en ligne repérée le " + fmtDate(m.earliest_appearance.first_seen));
-        else if ((m.appearances || []).length === 0) bits.push("aucune apparition antérieure repérée");
-        bits.forEach(function (b) { div.appendChild(el("div", "• " + b, "muted")); });
+          bits.push("Première apparition en ligne repérée le " + fmtDate(m.earliest_appearance.first_seen) + ".");
+        else if ((m.appearances || []).length === 0) bits.push("Aucune apparition antérieure repérée.");
+        bits.forEach(function (b) { div.appendChild(el("div", "• " + b, "detail")); });
       }
-      mwrap.appendChild(div);
+      vw.appendChild(div);
     });
+
+    /* Bloc 3 : source originelle */
+    var og = $("origine");
+    og.textContent = "";
+    var p = report.post || {};
+    function addDt(label, value, node) {
+      og.appendChild(el("dt", label));
+      var dd = el("dd");
+      if (node) dd.appendChild(node); else dd.textContent = value || "—";
+      og.appendChild(dd);
+    }
+    addDt("Publication analysée", null, link(p.url || report.url, p.url || report.url));
+    if (p.author_name || p.author_handle)
+      addDt("Auteur", (p.author_name || "") + (p.author_handle ? " (@" + p.author_handle + ")" : ""));
+    addDt("Date de publication", p.published_at ? fmtDate(p.published_at) : "—");
+    addDt("Plateforme", p.platform === "x" ? "X (Twitter)" : p.platform === "web" ? "Page web" : (p.platform || "—"));
 
     var tl = report.timeline || [];
-    $("timeline-box").hidden = tl.length === 0;
     var twrap = $("timeline");
     twrap.textContent = "";
     tl.forEach(function (event) {
       var li = el("li");
-      li.appendChild(el("div", (KINDS[event.kind] || event.kind) + (event.detail ? " — " + event.detail : "")));
+      li.appendChild(el("div", (KINDS[event.kind] || event.kind) + (event.detail ? " — " + event.detail : ""), "titre"));
       li.appendChild(el("div", fmtDate(event.date), "date"));
       if (event.url) li.appendChild(link(event.url, event.url));
       twrap.appendChild(li);
+    });
+    $("origine-note").textContent = tl.length <= 1
+      ? "L'origine exacte n'a pas pu être établie au-delà de la publication analysée : à traiter avec prudence."
+      : "Quand l'origine exacte ne peut pas être établie, on le dit. Aucune source secondaire n'est présentée comme originelle.";
+
+    /* Bloc 4 : corroboration */
+    var cbox = $("corroboration-box"), cwrap = $("corroboration");
+    var claims = report.claims || [], fcs = report.factchecks || [];
+    cbox.hidden = claims.length === 0 && fcs.length === 0;
+    cwrap.textContent = "";
+    claims.forEach(function (c) {
+      var div = el("div", "", "claim");
+      div.appendChild(el("div", c.text, "texte"));
+      var vv = VERDICTS[c.verdict] || VERDICTS.unverifiable;
+      div.appendChild(el("span", vv.micro, "verdict " + (c.verdict === "supported" ? "v-jaune" : "")));
+      div.appendChild(el("span", vv.role, "role"));
+      if (c.explanation) div.appendChild(el("div", c.explanation, "explication"));
+      var sw = el("div", "", "sources");
+      (c.sources || []).forEach(function (src) { sw.appendChild(link(src.url, src.title || src.url)); });
+      if ((c.sources || []).length) div.appendChild(sw);
+      cwrap.appendChild(div);
+    });
+    fcs.forEach(function (fc) {
+      var div = el("div", "", "claim");
+      div.appendChild(el("div", fc.title || fc.claim_text || "Fact-check", "texte"));
+      div.appendChild(el("span", "Fact-check déjà publié", "verdict"));
+      div.appendChild(el("span", "Contredit", "role"));
+      div.appendChild(el("div", (fc.publisher ? fc.publisher + " — " : "") + (fc.rating || ""), "explication"));
+      if (fc.url) div.appendChild(link(fc.url, fc.url, ""));
+      cwrap.appendChild(div);
     });
 
     var limits = report.limits || [];
     $("limits-box").hidden = limits.length === 0;
     var lwrap = $("limits");
     lwrap.textContent = "";
-    limits.forEach(function (l) { var li = el("li", l); lwrap.appendChild(li); });
+    limits.forEach(function (l) { lwrap.appendChild(el("li", l)); });
 
     var perm = $("permalink");
     if (report.id) { perm.href = "/r/" + report.id; perm.hidden = false; }
@@ -250,9 +435,11 @@
   $("form").addEventListener("submit", function (event) {
     event.preventDefault();
     $("error").hidden = true;
+    $("statut").hidden = false;
+    $("report").hidden = true;
     var button = $("go");
     button.disabled = true;
-    button.textContent = "Vérification…";
+    button.textContent = "On remonte le fil…";
     fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -266,7 +453,8 @@
       showError(err && err.message ? err.message : "Analyse impossible, réessayez.");
     }).finally(function () {
       button.disabled = false;
-      button.textContent = "Vérifier";
+      button.textContent = "Checker l'info ↗";
+      $("statut").hidden = true;
     });
   });
 
