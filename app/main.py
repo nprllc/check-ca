@@ -79,9 +79,9 @@ def health() -> dict:
         "status": "ok",
         "version": "0.1.0",
         "affirmations": bool(settings.mistral_api_key or settings.anthropic_api_key),
-        "factchecks": bool(settings.google_factcheck_api_key),
-        "recherche inversée": bool(settings.serpapi_api_key),
-        "détecteur IA": bool(settings.ai_detector_url),
+        "factchecks": bool(settings.google_factcheck_api_key or settings.mistral_api_key),
+        "recherche d'images": bool(settings.serpapi_api_key or settings.mistral_api_key),
+        "analyse IA des images": bool(settings.ai_detector_url or settings.mistral_api_key),
         "médias (local)": True,
         "chronologie (Wayback)": True,
     }

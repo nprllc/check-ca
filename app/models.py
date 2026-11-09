@@ -66,6 +66,11 @@ class MediaFinding:
     appearances: list[Appearance] = field(default_factory=list)
     refuted_by_factcheck: bool = False
     error: str = ""
+    # Verdict trouvé sur le web par le module propagation (recherche Mistral)
+    web_verdict: str = ""  # authentic | ai_generated | misrepresented | refuted | unknown | ""
+    web_explanation: str = ""
+    web_source_url: str = ""
+    web_source_title: str = ""
 
 
 @dataclass
@@ -91,7 +96,7 @@ class Post:
 
 @dataclass
 class TimelineEvent:
-    kind: str  # post | media | factcheck
+    kind: str  # post | media | factcheck | share
     date: Optional[datetime]
     title: str = ""
     url: str = ""
@@ -127,6 +132,7 @@ class Report:
     timeline: list[TimelineEvent] = field(default_factory=list)
     scores: Optional[Scores] = None
     summary: str = ""
+    propagation_summary: str = ""
     limits: list[str] = field(default_factory=list)
 
 

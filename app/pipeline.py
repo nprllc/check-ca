@@ -1,6 +1,6 @@
 """Orchestration d'une analyse :
 
-connecteur → fact-checks → (affirmations, médias, archives en parallèle)
+connecteur → fact-checks → (affirmations, médias, propagation en parallèle)
 → chronologie → scores.
 """
 from __future__ import annotations
@@ -12,8 +12,9 @@ from datetime import datetime, timezone
 import httpx
 
 from app.analyzers.claims import analyze_claims
-from app.analyzers.factchecks import image_search_factchecks, search_factchecks
+from app.analyzers.factchecks import image_search_factchecks, search_factchecks, search_factchecks_mistral
 from app.analyzers.media import analyze_media
+from app.analyzers.propagation import analyze_propagation, apply_image_assessments
 from app.analyzers.timeline import build_timeline
 from app.config import Settings
 from app.connectors import pick_connector
@@ -34,27 +35,34 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
     report.post = post
 
     # 2. Fact-checks déjà publiés (indépendant du reste).
+    #    Google Fact Check si la clé existe, sinon recherche web Mistral.
     factchecks: list[FactCheck] = []
     modules = [ModuleStatus(name="affirmations", ok=False),
                ModuleStatus(name="fact-checks", ok=False),
                ModuleStatus(name="médias", ok=True)]
-    if settings.google_factcheck_api_key:
+    if settings.google_factcheck_api_key or settings.mistral_api_key:
         try:
-            factchecks.extend(await search_factchecks(post, settings, client))
+            if settings.google_factcheck_api_key:
+                factchecks.extend(await search_factchecks(post, settings, client))
+            else:
+                factchecks.extend(await search_factchecks_mistral(post, settings, client))
             modules[1] = ModuleStatus(name="fact-checks", ok=True)
         except Exception as exc:  # noqa: BLE001
             report.limits.append(f"Recherche de fact-checks en échec : {exc}")
     else:
-        report.limits.append("Recherche de fact-checks désactivée (clé GOOGLE_FACTCHECK_API_KEY absente)")
+        report.limits.append("Recherche de fact-checks non configurée (clé GOOGLE_FACTCHECK_API_KEY ou MISTRAL_API_KEY absente)")
 
-    # 3. Affirmations et médias, en parallèle.
+    # 3. Affirmations, médias et propagation, en parallèle.
     claims: list[Claim] = []
     media: list[MediaFinding] = []
     claim_task = None
+    propagation_task = None
     if settings.mistral_api_key or settings.anthropic_api_key:
         claim_task = asyncio.ensure_future(analyze_claims(post, settings, client))
     else:
         report.limits.append("Vérification des affirmations non configurée (clé MISTRAL_API_KEY ou ANTHROPIC_API_KEY absente)")
+    if settings.mistral_api_key:
+        propagation_task = asyncio.ensure_future(analyze_propagation(post, settings, client))
     media_tasks = [asyncio.ensure_future(analyze_media(item, post, settings, client))
                    for item in post.media]
 
@@ -86,12 +94,26 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
         modules[2] = ModuleStatus(name="médias", ok=True)
         report.limits.append("Aucun média à analyser")
 
-    if not settings.serpapi_api_key:
+    # 3 bis. Propagation : qui a partagé ce contenu en premier, et verdict
+    # web sur chaque image. Sans ces résultats, l'origine des images et la
+    # détection IA reposent sur la recherche web de ce module.
+    propagation_summary = ""
+    share_events: list = []
+    if propagation_task is not None:
+        try:
+            propagation_summary, share_events, assessments = await propagation_task
+            apply_image_assessments(media, assessments)
+        except Exception as exc:  # noqa: BLE001
+            report.limits.append(f"Recherche de propagation en échec : {exc}")
+
+    # Outils optionnels : quand la recherche web Mistral est active, elle
+    # couvre l'origine des images et l'analyse IA — pas de ligne « limites ».
+    if not settings.serpapi_api_key and not settings.mistral_api_key:
         report.limits.append("Recherche inversée désactivée (clé SERPAPI_API_KEY absente) : origine des images inconnue")
-    if not settings.ai_detector_url:
+    if not settings.ai_detector_url and not settings.mistral_api_key:
         report.limits.append("Détecteur IA non configuré (AI_DETECTOR_URL absente) : pas de probabilité IA")
 
-    # Un fact-check déjà lié à l'affirmation principale via la recherche Claude compte aussi.
+    # Un fact-check déjà lié à l'affirmation principale via la recherche LLM compte aussi.
     for factcheck in factchecks:
         if factcheck.url and factcheck.url in related_urls:
             factcheck.related_to_main_claim = True
@@ -101,6 +123,10 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
     report.factchecks = factchecks
     report.media = media
     report.timeline = build_timeline(post, media, factchecks)
+    if share_events:
+        report.timeline.extend(share_events)
+        report.timeline.sort(key=lambda e: (e.date is None, e.date))
+    report.propagation_summary = propagation_summary
     report.scores = compute_scores(post, claims, factchecks, media, modules)
     report.summary = summary or _fallback_summary(post, claims, factchecks, media)
     report.limits = [l for l in report.limits if l]

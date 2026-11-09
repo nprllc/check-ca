@@ -124,6 +124,21 @@
   .media-bloc img { max-width: 100%; border-radius: 10px; margin-top: 8px; }
   .media-bloc .detail { color: var(--gris); font-size: .82rem; margin-top: 4px; }
 
+  /* Verdict par image : toujours en toutes lettres, jaune = alerte IA */
+  .img-verdict { display: inline-block; margin-top: 10px; padding: 6px 14px; border-radius: 999px;
+                 border: 2px solid var(--jaune); font-weight: 600; font-size: .85rem;
+                 letter-spacing: .02em; }
+  .img-verdict.ia { background: var(--jaune); color: var(--noir); border-color: var(--jaune); }
+  .web-assess { margin-top: 6px; font-size: .84rem; color: var(--blanc); }
+  .web-assess .src { color: var(--gris); font-size: .78rem; margin-top: 2px; }
+  .web-assess a { color: var(--blanc); text-decoration-color: var(--jaune); word-break: break-all; }
+
+  /* Ce qu'on sait de la propagation */
+  .propa { margin: 16px 0 0; padding: 12px 16px; background: var(--jaune-16);
+           border-left: 4px solid var(--jaune); font-size: .92rem; }
+  .propa .tag { display: block; text-transform: uppercase; letter-spacing: .1em;
+                font-size: .72rem; font-weight: 700; margin-bottom: 4px; }
+
   .limits { color: var(--gris); font-size: .85rem; padding-left: 18px; margin: 8px 0 0; }
   .limits li { margin-top: 5px; }
 
@@ -222,6 +237,7 @@
       <h2>La source originelle<span class="point">.</span></h2>
       <dl class="origine" id="origine"></dl>
       <ul class="timeline" id="timeline"></ul>
+      <p class="propa" id="propagation" hidden></p>
       <p class="methodo" id="origine-note"></p>
     </div>
 
@@ -276,10 +292,10 @@
     supported:   { micro: "C'est confirmé.",            role: "Confirme" },
     mixed:       { micro: "Attention, il manque du contexte.", role: "Nuance" },
     contradicted:{ micro: "Non, ça ne tient pas.",       role: "Contredit" },
-    unverifiable:{ micro: "Impossible de trancher pour le moment.", role: "Non concluant" }
+    unverifiable:{ micro: "Aucune source fiable trouvée pour ce point.", role: "Non concluant" }
   };
   var KINDS = { post: "Publication du post", media: "Première apparition d'un média",
-                factcheck: "Fact-check publié" };
+                factcheck: "Fact-check publié", share: "Partage repéré" };
 
   function el(tag, text, cls) {
     var node = document.createElement(tag);
@@ -301,10 +317,31 @@
   /* Verdict global : en toutes lettres, jamais porté par la seule couleur */
   function verdictGlobal(s) {
     var n = s.claim_solidity;
-    if (n === null || n === undefined) return { label: "On ne sait pas", micro: "Impossible de trancher pour le moment." };
+    if (n === null || n === undefined) return { label: "On ne sait pas", micro: "Aucune source n'a permis de trancher cette affirmation." };
     if (n >= 75) return { label: "C'est vrai", micro: "C'est confirmé." };
     if (n >= 50) return { label: "C'est trompeur", micro: "Attention, il manque du contexte." };
     return { label: "C'est faux", micro: "Non, ça ne tient pas." };
+  }
+
+  /* Verdict par image : uniquement ce qui est établi — sans élément, on ne
+     dit rien (ni « non concluante », ni formule d'attente). */
+  function mediaVerdict(m, post) {
+    var postDate = post && post.published_at ? new Date(post.published_at) : null;
+    var earliest = m.earliest_appearance && m.earliest_appearance.first_seen
+      ? new Date(m.earliest_appearance.first_seen) : null;
+    if (m.iptc_ai_marker || m.c2pa_ai_generated)
+      return { label: "Générée par IA — marqueurs détectés", cls: "ia" };
+    if (m.web_verdict === "ai_generated")
+      return { label: "Probablement générée par IA", cls: "ia" };
+    if (m.web_verdict === "refuted")
+      return { label: "Démentie par un fact-check", cls: "" };
+    if (m.web_verdict === "misrepresented")
+      return { label: "Image détournée, hors contexte", cls: "" };
+    if (m.web_verdict === "authentic")
+      return { label: "Image authentique", cls: "" };
+    if (earliest && postDate && earliest < postDate)
+      return { label: "Déjà en ligne avant ce post", cls: "" };
+    return null;
   }
 
   function showGauge(parent, num, lab, valueName) {
@@ -346,7 +383,7 @@
       var ul = $(ulId), box = $(boxId);
       ul.textContent = "";
       box.classList.toggle("vide", arr.length === 0);
-      if (arr.length === 0) { ul.appendChild(el("li", "Rien à signaler pour le moment.")); return; }
+      if (arr.length === 0) { ul.appendChild(el("li", "Rien à signaler.")); return; }
       arr.forEach(function (c) {
         var li = el("li", c.text);
         if (c.verdict && VERDICTS[c.verdict]) li.appendChild(el("span", "  " + VERDICTS[c.verdict].micro));
@@ -375,6 +412,18 @@
         } else if (mm.kind === "video") {
           div.appendChild(el("div", "Vidéo du post analysée.", "detail"));
         }
+        var verdict = mediaVerdict(m, report.post);
+        if (verdict) div.appendChild(el("span", verdict.label, "img-verdict" + (verdict.cls ? " " + verdict.cls : "")));
+        if (m.web_explanation) {
+          var assess = el("div", "", "web-assess");
+          assess.appendChild(el("div", m.web_explanation));
+          if (m.web_source_url) {
+            var src = el("div", "Source : ", "src");
+            src.appendChild(link(m.web_source_url, m.web_source_title || m.web_source_url));
+            assess.appendChild(src);
+          }
+          div.appendChild(assess);
+        }
         var bits = [];
         if (m.exif_ai_software) bits.push("Logiciel IA détecté dans les métadonnées : " + m.exif_ai_software);
         if (m.c2pa_ai_generated) bits.push("Marqueur de génération IA (C2PA/IPTC).");
@@ -383,7 +432,6 @@
           bits.push("Probabilité IA estimée : " + Math.round(m.ai_probability * 100) + "%.");
         if (m.earliest_appearance && m.earliest_appearance.first_seen)
           bits.push("Première apparition en ligne repérée le " + fmtDate(m.earliest_appearance.first_seen) + ".");
-        else if ((m.appearances || []).length === 0) bits.push("Aucune apparition antérieure repérée.");
         bits.forEach(function (b) { div.appendChild(el("div", "• " + b, "detail")); });
       }
       vw.appendChild(div);
@@ -410,14 +458,31 @@
     twrap.textContent = "";
     tl.forEach(function (event) {
       var li = el("li");
-      li.appendChild(el("div", (KINDS[event.kind] || event.kind) + (event.detail ? " — " + event.detail : ""), "titre"));
+      var titre = event.title || KINDS[event.kind] || event.kind;
+      li.appendChild(el("div", titre + (event.detail ? " — " + event.detail : ""), "titre"));
       li.appendChild(el("div", fmtDate(event.date), "date"));
       if (event.url) li.appendChild(link(event.url, event.url));
       twrap.appendChild(li);
     });
-    $("origine-note").textContent = tl.length <= 1
-      ? "L'origine exacte n'a pas pu être établie au-delà de la publication analysée : à traiter avec prudence."
-      : "Quand l'origine exacte ne peut pas être établie, on le dit. Aucune source secondaire n'est présentée comme originelle.";
+    /* Ce qu'on sait de la propagation : montré seulement s'il y a quelque
+       chose d'établi — sinon on ne dit rien. */
+    var propa = $("propagation");
+    if (report.propagation_summary) {
+      propa.textContent = "";
+      propa.appendChild(el("span", "Ce qu'on sait de la propagation", "tag"));
+      propa.appendChild(document.createTextNode(report.propagation_summary));
+      propa.hidden = false;
+    } else {
+      propa.hidden = true;
+    }
+    var firstShare = tl.some(function (e) { return e.kind === "share" && /Premier partage/.test(e.title || ""); });
+    var anyMediaVerdict = media.some(function (m) { return !m.error && mediaVerdict(m, p) !== null; });
+    if (firstShare)
+      $("origine-note").textContent = "Le premier partage repéré est le plus ancien trouvé sur le web à ce jour — pas nécessairement l'origine absolue.";
+    else if (media.length > 0 && !anyMediaVerdict)
+      $("origine-note").textContent = "Sans marqueur dans le fichier ni analyse web, l'authenticité de ces images n'est pas établie.";
+    else
+      $("origine-note").textContent = "";
 
     /* Bloc 4 : corroboration */
     var cbox = $("corroboration-box"), cwrap = $("corroboration");
