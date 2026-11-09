@@ -26,6 +26,29 @@ def _new_id() -> str:
     return uuid.uuid4().hex[:12]
 
 
+def _brief(exc: Exception) -> str:
+    """Message d'erreur court : sans le bloc « For more information » de httpx."""
+    return str(exc).split("For more information")[0].strip()
+
+
+def _first_share_line(events: list) -> str:
+    """Ligne factuelle et déterministe sur le premier partage repéré.
+
+    Elle complète le résumé rédigé par le modèle : la chronologie fait foi,
+    pas la reformulation. Cas particulier : quand le post analysé est le
+    premier partage connu, le résumé le dit déjà — pas de doublon.
+    """
+    with_date = [e for e in events if e.date is not None]
+    if not with_date:
+        return ""
+    first = min(with_date, key=lambda e: e.date)
+    if not first.url or first.title.startswith("Premier partage connu"):
+        return ""
+    host = first.url.split("//", 1)[-1].split("/", 1)[0]
+    date_txt = first.date.strftime("%d/%m/%Y")
+    return f"Premier partage repéré à ce jour : {host}, le {date_txt}. "
+
+
 async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) -> Report:
     report = Report(id=_new_id(), url=url, created_at=datetime.now(timezone.utc))
 
@@ -48,7 +71,7 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
                 factchecks.extend(await search_factchecks_mistral(post, settings, client))
             modules[1] = ModuleStatus(name="fact-checks", ok=True)
         except Exception as exc:  # noqa: BLE001
-            report.limits.append(f"Recherche de fact-checks en échec : {exc}")
+            report.limits.append(f"Recherche de fact-checks en échec : {_brief(exc)}")
     else:
         report.limits.append("Recherche de fact-checks non configurée (clé GOOGLE_FACTCHECK_API_KEY ou MISTRAL_API_KEY absente)")
 
@@ -73,7 +96,7 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
             summary, claims, related_urls = await claim_task
             modules[0] = ModuleStatus(name="affirmations", ok=True)
         except Exception as exc:  # noqa: BLE001
-            report.limits.append(f"Vérification des affirmations en échec : {exc}")
+            report.limits.append(f"Vérification des affirmations en échec : {_brief(exc)}")
 
     if media_tasks:
         media = await asyncio.gather(*media_tasks)
@@ -103,8 +126,9 @@ async def run_analysis(url: str, settings: Settings, client: httpx.AsyncClient) 
         try:
             propagation_summary, share_events, assessments = await propagation_task
             apply_image_assessments(media, assessments)
+            propagation_summary = _first_share_line(share_events) + propagation_summary
         except Exception as exc:  # noqa: BLE001
-            report.limits.append(f"Recherche de propagation en échec : {exc}")
+            report.limits.append(f"Recherche de propagation en échec : {_brief(exc)}")
 
     # Outils optionnels : quand la recherche web Mistral est active, elle
     # couvre l'origine des images et l'analyse IA — pas de ligne « limites ».

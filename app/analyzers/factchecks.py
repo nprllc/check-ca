@@ -10,13 +10,12 @@ import unicodedata
 
 import httpx
 
-from app.analyzers.mistral import extract_json_block, extract_texts_and_refs
+from app.analyzers.mistral import call_conversations, extract_json_block, extract_texts_and_refs
 from app.config import Settings
 from app.models import FactCheck, Post
 from app.analyzers.media import parse_loose_date
 
 _BASE = "https://factchecktools.googleapis.com/v1alpha1/claims"
-_MISTRAL_URL = "https://api.mistral.ai/v1/conversations"
 
 _STOPWORDS = {"les", "des", "une", "aux", "avec", "pour", "dans", "sur", "par", "que",
               "qui", "quoi", "cette", "après", "avant", "plus", "moins", "être", "avoir"}
@@ -163,14 +162,6 @@ def parse_factchecks_mistral(data: dict, post: Post) -> list[FactCheck]:
 async def search_factchecks_mistral(post: Post, settings: Settings,
                                     client: httpx.AsyncClient) -> list[FactCheck]:
     """Fact-checks déjà publiés, trouvés par recherche web Mistral."""
-    body = {
-        "model": settings.mistral_model,
-        "instructions": _MISTRAL_FC_INSTRUCTIONS,
-        "inputs": _factcheck_context(post),
-        "tools": [{"type": "web_search"}],
-        "store": False,
-    }
-    resp = await client.post(_MISTRAL_URL, json=body,
-                             headers={"Authorization": f"Bearer {settings.mistral_api_key}"})
-    resp.raise_for_status()
-    return parse_factchecks_mistral(resp.json(), post)
+    data = await call_conversations(client, settings, _MISTRAL_FC_INSTRUCTIONS,
+                                    _factcheck_context(post))
+    return parse_factchecks_mistral(data, post)

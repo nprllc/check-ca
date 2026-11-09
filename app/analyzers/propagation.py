@@ -31,11 +31,10 @@ from urllib.parse import urlsplit
 import httpx
 
 from app.analyzers.media import _excluded, parse_loose_date
-from app.analyzers.mistral import extract_json_block, extract_texts_and_refs
+from app.analyzers.mistral import call_conversations, extract_json_block, extract_texts_and_refs
 from app.config import Settings
 from app.models import MediaFinding, Post, TimelineEvent
 
-_MISTRAL_URL = "https://api.mistral.ai/v1/conversations"
 _JSON_BLOCK = re.compile(r"<json>\s*(\{.*?\})\s*</json>", re.DOTALL)
 
 _VERDICTS = {"authentic", "ai_generated", "misrepresented", "refuted", "unknown"}
@@ -275,14 +274,6 @@ def _post_context(post: Post) -> str:
 async def analyze_propagation(post: Post, settings: Settings,
                               client: httpx.AsyncClient) -> tuple[str, list[TimelineEvent], list[dict]]:
     """Recherche de propagation via l'API Conversations Mistral."""
-    body = {
-        "model": settings.mistral_model,
-        "instructions": INSTRUCTIONS,
-        "inputs": _post_context(post),
-        "tools": [{"type": "web_search"}],
-        "store": False,
-    }
-    resp = await client.post(_MISTRAL_URL, json=body,
-                             headers={"Authorization": f"Bearer {settings.mistral_api_key}"})
-    resp.raise_for_status()
-    return parse_mistral_response(resp.json(), post)
+    data = await call_conversations(client, settings, INSTRUCTIONS,
+                                    _post_context(post))
+    return parse_mistral_response(data, post)

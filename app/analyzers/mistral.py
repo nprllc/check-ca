@@ -13,6 +13,7 @@ fact-checks et propagation :
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 
@@ -74,3 +75,40 @@ def extract_json_block(texts: list[str]) -> dict:
     except json.JSONDecodeError:
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+CONVERSATIONS_URL = "https://api.mistral.ai/v1/conversations"
+
+# Le 503 observé en production est transitoire : un seul réessai suffit à
+# le franchir dans la grande majorité des cas.
+_RETRY_STATUS = frozenset({408, 409, 429, 500, 502, 503, 504})
+
+
+async def call_conversations(client, settings, instructions: str,
+                             inputs: list) -> dict:
+    """Appel Conversations avec un réessai sur erreur transitoire.
+
+    Une seule nouvelle tentative, après une courte pause, pour les statuts
+    « réessayez plus tard » (429/5xx). Toute autre erreur (clé invalide,
+    mauvaise requête…) remonte immédiatement.
+    """
+    body = {
+        "model": settings.mistral_model,
+        "instructions": instructions,
+        "inputs": inputs,
+        "tools": [{"type": "web_search"}],
+        "store": False,
+    }
+    headers = {"Authorization": f"Bearer {settings.mistral_api_key}"}
+    for attempt in range(2):
+        if attempt:
+            await asyncio.sleep(2.5)
+        resp = await client.post(CONVERSATIONS_URL, json=body, headers=headers)
+        if resp.status_code in _RETRY_STATUS:
+            continue
+        resp.raise_for_status()
+        return resp.json()
+    raise RuntimeError(
+        f"service Mistral momentanément indisponible (HTTP {resp.status_code}, "
+        "nouvel essai recommandé)"
+    )
