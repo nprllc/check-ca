@@ -1,0 +1,15 @@
+# Clés et secrets : jamais dans le dépôt
+.env
+*.key
+
+# Base locale et fichiers temporaires
+*.sqlite3
+*.sqlite3-journal
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Système
+.DS_Store

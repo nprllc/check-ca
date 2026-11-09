@@ -1,0 +1,8 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+httpx>=0.27
+pydantic>=2.7
+pillow>=10.4
+imagehash>=4.3
+# Optionnel : lecture des Content Credentials (C2PA)
+c2pa-python==0.38.1

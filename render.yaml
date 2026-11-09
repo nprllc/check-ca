@@ -1,0 +1,25 @@
+# Déploiement Render en un clic (Blueprint) : Render lit ce fichier
+# et demande les clés marquées sync: false au moment de la création.
+services:
+  - type: web
+    name: check-ca
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GOOGLE_FACTCHECK_API_KEY
+        sync: false
+      - key: SERPAPI_API_KEY
+        sync: false
+      - key: CLAUDE_MODEL
+        value: claude-sonnet-5-5
+      - key: RATE_LIMIT_PER_HOUR
+        value: "20"
+      - key: MAX_ANALYSES_PER_DAY
+        value: "200"
