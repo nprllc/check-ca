@@ -1,0 +1,27 @@
+name: Activer GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+jobs:
+  enable-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Activer Pages (source : main /docs)
+        run: |
+          code=$(curl -s -o /tmp/resp.json -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/nprllc/check-ca/pages \
+            -d '{"source":{"branch":"main","path":"/docs"}}')
+          echo "HTTP $code"
+          cat /tmp/resp.json || true
+          # 409 = déjà activé : ce n'est pas une erreur pour nous.
+          if [ "$code" != "201" ] && [ "$code" != "409" ]; then exit 1; fi
